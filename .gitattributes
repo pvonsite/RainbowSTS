@@ -1,0 +1,2 @@
+model.bin filter=lfs diff=lfs merge=lfs -text
+m2m100_ct2/sentencepiece.bpe.model filter=lfs diff=lfs merge=lfs -text
