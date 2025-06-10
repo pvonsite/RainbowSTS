@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Speech Translation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .config-panel, .result-panel {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result-panel {
+            min-height: 200px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        select, input {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+            max-width: 400px;
+        }
+        .status {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .original-text, .translated-text {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #ccc;
+        }
+        .translated-text {
+            border-left-color: #007bff;
+        }
+        .config-item {
+            margin-bottom: 15px;
+        }
+        .config-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .device-info {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Real-time Speech Translation</h1>
+
+        <div class="config-panel">
+            <h2>Configuration</h2>
+            <div class="config-item">
+                <label for="audio-device">Audio Input Device:</label>
+                <select id="audio-device">
+                    <option value="">Loading audio devices...</option>
+                </select>
+                <div class="device-info" id="device-info"></div>
+            </div>
+            <div class="config-item">
+                <label for="stt-model">STT Model:</label>
+                <select id="stt-model">
+                    <option value="base">Base (English)</option>
+                    <option value="small">Small</option>
+                    <option value="medium">Medium</option>
+                    <option value="large-v2">Large-v2</option>
+                </select>
+            </div>
+            <div class="config-item">
+                <label for="source-language">Source Language:</label>
+                <select id="source-language">
+                    <option value="en">English</option>
+                    <option value="fr">French</option>
+                    <option value="es">Spanish</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                </select>
+            </div>
+            <div class="config-item">
+                <label for="target-language">Target Language:</label>
+                <select id="target-language">
+                    <option value="fr">French</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="de">German</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                </select>
+            </div>
+            <button id="start-btn">Start Session</button>
+            <button id="stop-btn" disabled>Stop Session</button>
+        </div>
+
+        <div class="status" id="status">Status: Ready</div>
+
+        <div class="control-panel">
+            <button id="start-listening-btn" disabled>Start Listening</button>
+            <button id="stop-listening-btn" disabled>Stop Listening</button>
+        </div>
+
+        <div class="result-panel">
+            <h2>Results</h2>
+            <div>
+                <h3>Original Text:</h3>
+                <div class="original-text" id="original-text"></div>
+            </div>
+            <div>
+                <h3>Translated Text:</h3>
+                <div class="translated-text" id="translated-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let sessionId;
+        let isRecording = false;
+        let mediaRecorder;
+        let audioChunks = [];
+        let selectedDeviceId = '';
+
+        // UI Elements
+        const audioDeviceSelect = document.getElementById('audio-device');
+        const deviceInfoElement = document.getElementById('device-info');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const startListeningBtn = document.getElementById('start-listening-btn');
+        const stopListeningBtn = document.getElementById('stop-listening-btn');
+        const statusElement = document.getElementById('status');
+        const originalTextElement = document.getElementById('original-text');
+        const translatedTextElement = document.getElementById('translated-text');
+
+        // Load available audio devices on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAudioDevices();
+        });
+
+        // Get and populate available audio devices
+        async function loadAudioDevices() {
+            try {
+                // First, we need permission to access audio devices
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Stop the stream immediately after getting permission
+                stream.getTracks().forEach(track => track.stop());
+
+                // Now get the list of devices
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
+
+                // Clear the loading option
+                audioDeviceSelect.innerHTML = '';
+
+                if (audioInputDevices.length === 0) {
+                    audioDeviceSelect.innerHTML = '<option value="">No audio devices found</option>';
+                    deviceInfoElement.textContent = 'No audio input devices detected. Please check your microphone connection.';
+                    return;
+                }
+
+                // Add each audio input device to the select element
+                audioInputDevices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+
+                    // Format the device label or use a default if not available
+                    const label = device.label || `Audio device ${device.deviceId.slice(0, 5)}...`;
+                    option.textContent = label;
+
+                    audioDeviceSelect.appendChild(option);
+                });
+
+                // Set the first device as selected by default
+                selectedDeviceId = audioInputDevices[0].deviceId;
+                updateDeviceInfo(audioInputDevices[0]);
+
+                // Add event listener for device selection change
+                audioDeviceSelect.addEventListener('change', () => {
+                    selectedDeviceId = audioDeviceSelect.value;
+                    const selectedDevice = audioInputDevices.find(d => d.deviceId === selectedDeviceId);
+                    if (selectedDevice) {
+                        updateDeviceInfo(selectedDevice);
+                    }
+                });
+
+                statusElement.textContent = 'Status: Audio devices loaded';
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                audioDeviceSelect.innerHTML = '<option value="">Error loading devices</option>';
+                deviceInfoElement.textContent = 'Error accessing audio devices. Please ensure microphone permissions are granted.';
+                statusElement.textContent = 'Status: Error loading audio devices';
+            }
+        }
+
+        // Update device info display
+        function updateDeviceInfo(device) {
+            if (device.label) {
+                deviceInfoElement.textContent = `Selected: ${device.label}`;
+            } else {
+                deviceInfoElement.textContent = 'Device details not available until recording starts';
+            }
+        }
+
+        // Start a new session
+        startBtn.addEventListener('click', async () => {
+            try {
+                if (!selectedDeviceId) {
+                    statusElement.textContent = 'Status: Error - No audio device selected';
+                    return;
+                }
+
+                // Get configuration
+                const config = {
+                    stt_model: document.getElementById('stt-model').value,
+                    source_language: document.getElementById('source-language').value,
+                    target_language: document.getElementById('target-language').value,
+                    websocket_port: 8765, // Default port
+                    input_device_index: selectedDeviceId
+                };
+
+                // Request to start a new session
+                const response = await fetch('/start_session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    sessionId = data.session_id;
+                    connectWebSocket(data.websocket_url);
+
+                    // Update UI
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    statusElement.textContent = 'Status: Session started';
+                } else {
+                    statusElement.textContent = `Status: Error - ${data.message}`;
+                }
+            } catch (error) {
+                console.error('Error starting session:', error);
+                statusElement.textContent = 'Status: Error starting session';
+            }
+        });
+
+        // Stop the current session
+        stopBtn.addEventListener('click', async () => {
+            if (sessionId) {
+                try {
+                    await fetch(`/stop_session/${sessionId}`, {
+                        method: 'POST'
+                    });
+
+                    // Clean up
+                    if (socket) {
+                        socket.close();
+                        socket = null;
+                    }
+
+                    stopRecording();
+
+                    // Update UI
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    startListeningBtn.disabled = true;
+                    stopListeningBtn.disabled = true;
+                    statusElement.textContent = 'Status: Session stopped';
+                } catch (error) {
+                    console.error('Error stopping session:', error);
+                }
+            }
+        });
+
+        // Connect to WebSocket server
+        function connectWebSocket(url) {
+            socket = new WebSocket(url);
+
+            socket.onopen = () => {
+                console.log('WebSocket connection established');
+                startListeningBtn.disabled = false;
+                statusElement.textContent = 'Status: Connected to WebSocket server';
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'realtime' || data.type === 'fullSentence') {
+                        originalTextElement.textContent = data.text;
+                        // Note: Translation would be handled separately
+                    } else if (data.type === 'transcription') {
+                        originalTextElement.textContent = data.original_text;
+                        translatedTextElement.textContent = data.translated_text;
+                    } else if (data.type === 'status') {
+                        statusElement.textContent = `Status: ${data.status}`;
+                    } else if (data.type === 'connection') {
+                        console.log('Connection message:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+                statusElement.textContent = 'Status: Disconnected from WebSocket server';
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                statusElement.textContent = 'Status: WebSocket error';
+            };
+        }
+
+        // Start recording audio
+        startListeningBtn.addEventListener('click', async () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                try {
+                    await startRecording();
+                    socket.send(JSON.stringify({ command: 'start_listening' }));
+                    startListeningBtn.disabled = true;
+                    stopListeningBtn.disabled = false;
+                } catch (error) {
+                    console.error('Error starting recording:', error);
+                    statusElement.textContent = 'Status: Error accessing microphone';
+                }
+            }
+        });
+
+        // Stop recording audio
+        stopListeningBtn.addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                stopRecording();
+                socket.send(JSON.stringify({ command: 'stop_listening' }));
+                startListeningBtn.disabled = false;
+                stopListeningBtn.disabled = true;
+            }
+        });
+
+        // Recording functions
+        async function startRecording() {
+            if (isRecording) return;
+
+            try {
+                // Use the selected audio device
+                const constraints = {
+                    audio: {
+                        deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined
+                    }
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+
+                        // Prepare data for sending to WebSocket server
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            const audioBlob = new Blob([event.data], { type: 'audio/webm' });
+                            const reader = new FileReader();
+
+                            reader.onloadend = () => {
+                                // Get the audio data as ArrayBuffer
+                                const audioData = reader.result;
+
+                                // Create metadata
+                                const metadata = {
+                                    sampleRate: 48000, // Standard sample rate, adjust if needed
+                                    channels: 1,       // Mono audio
+                                    format: 'webm'
+                                };
+                                const metadataStr = JSON.stringify(metadata);
+                                const metadataBytes = new TextEncoder().encode(metadataStr);
+
+                                // Create a buffer with metadata length (4 bytes) + metadata + audio data
+                                const metadataLength = new ArrayBuffer(4);
+                                new DataView(metadataLength).setInt32(0, metadataBytes.length, true);
+
+                                // Combine all parts into a single ArrayBuffer
+                                const combined = new Uint8Array([
+                                    ...new Uint8Array(metadataLength),
+                                    ...metadataBytes,
+                                    ...new Uint8Array(audioData)
+                                ]);
+
+                                // Send the combined data
+                                socket.send(combined.buffer);
+                            };
+
+                            reader.readAsArrayBuffer(audioBlob);
+                        }
+                    }
+                };
+                
+                // Use small time slices for real-time processing
+                mediaRecorder.start(100);
+                isRecording = true;
+                
+                statusElement.textContent = 'Status: Recording...';
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                throw error;
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                statusElement.textContent = 'Status: Recording stopped';
+            }
+        }
+    </script>
+</body>
+</html>

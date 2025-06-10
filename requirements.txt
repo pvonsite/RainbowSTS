@@ -1,0 +1,10 @@
+RealtimeSTT==0.3.104
+faster-whisper==1.1.1
+
+torch
+torchaudio
+transformers
+
+sentencepiece
+
+flask
