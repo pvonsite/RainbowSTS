@@ -54,6 +54,20 @@ class SessionManager {
             if (data.status === 'success') {
                 this.sessionId = data.session_id;
                 this.websocketHandler.connect(data.websocket_url);
+                this.websocketHandler.addEventListener('connection', (data) => {
+                    if (data && data.status === 'connected') {
+                        console.log('WebSocket connected:', data);
+                        this.statusElement.textContent = 'Status: WebSocket connected';
+                        this.startListeningBtn.disabled = false;
+                    } else {
+                        console.error('WebSocket connection failed:', data);
+                        this.statusElement.textContent = 'Status: WebSocket connection failed';
+                    }
+                })
+                this.websocketHandler.addEventListener('error', (error) => {
+                    console.error('WebSocket error:', error);
+                    this.statusElement.textContent = 'Status: WebSocket error';
+                });
 
                 // Update UI
                 this.startBtn.disabled = true;

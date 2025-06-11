@@ -9,6 +9,7 @@ import base64
 from datetime import datetime
 from difflib import SequenceMatcher
 from collections import deque
+
 from RealtimeSTT import AudioToTextRecorder
 
 
@@ -27,19 +28,19 @@ class bcolors:
 class STTProcessor(threading.Thread):
     """Speech-to-Text processor that runs in its own thread"""
 
-    def __init__(self, config, websocket, input_queue : queue.Queue, output_queue:queue.Queue):
+    def __init__(self, config, input_queue : asyncio.Queue, output_queue : queue.Queue):
         """
         Initialize the STT processor
 
         Args:
             config: Configuration dictionary for STT
-            websocket: WebSocket server instance for communication
             input_queue: Queue for receiving audio data
             output_queue: Queue for sending transcribed text
         """
         super().__init__()
+        logging.getLogger("RealtimeSTT").setLevel(logging.DEBUG)
+
         self.config = config
-        self.websocket = websocket
         self.input_queue = input_queue
         self.output_queue = output_queue
         self.daemon = True
@@ -70,7 +71,12 @@ class STTProcessor(threading.Thread):
         """Main thread execution"""
         try:
             self.running = True
-            self.logger.info("STT processor starting...")
+            print("STT processor starting...")
+
+            # Create a new event loop for this thread
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            loop = asyncio.get_event_loop()
+            self.loop = loop  # Store the loop for use with run_coroutine_threadsafe
 
             # Print initialization info
             print(f"{bcolors.OKGREEN}Initializing STT processor with parameters:{bcolors.ENDC}")
@@ -106,59 +112,55 @@ class STTProcessor(threading.Thread):
             )
 
             self.logger.info(f"{bcolors.OKGREEN}{bcolors.BOLD}STT processor initialized{bcolors.ENDC}")
-
-            # Process input queue and run the recorder
-            while self.running:
-                try:
-                    # Check if there are messages to process
-                    if not self.input_queue.empty():
-                        message = self.input_queue.get(block=False)
-
-                        if message['type'] == 'audio_data':
-                            # Process audio data from WebSocket
-                            audio_data = message['data']
-                            self._process_audio_data(audio_data)
-
-                        elif message['type'] == 'command':
-                            command = message['command']
-                            if command == 'start_listening':
-                                self.logger.info("Starting STT listening")
-                                self._start_listening()
-                            elif command == 'stop_listening':
-                                self.logger.info("Stopping STT listening")
-                                self._stop_listening()
-                            elif command == 'shutdown':
-                                self.logger.info("Shutting down STT processor")
-                                self.running = False
-
-                    # Process any pending audio from the recorder
-                    if self.recorder and self.running:
-                        # Process a chunk of the recorder's work
-                        self.recorder.text(self._process_text)
-
-                    time.sleep(0.01)  # Small sleep to prevent CPU hogging
-
-                except queue.Empty:
-                    pass
-                except Exception as e:
-                    self.logger.error(f"Error processing audio data: {str(e)}")
+            # Run the coroutine in this thread's event loop
+            loop.run_until_complete(self.process_input_queue())
 
         except Exception as e:
             self.logger.error(f"Error in STT processor: {str(e)}", exc_info=True)
         finally:
             self.stop()
-            self.logger.info("STT processor stopped")
+            print("STT processor stopped")
+
+    async def process_input_queue(self):
+        """Process input queue in the event loop"""
+        while self.running:
+            try:
+                # Check if there are messages to process
+                if not self.input_queue.empty():
+                    message = await self.input_queue.get()
+
+                    if message['type'] == 'audio_data':
+                        # Process audio data from WebSocket
+                        audio_data = message['data']
+                        self._process_audio_data(audio_data)
+
+                    elif message['type'] == 'command':
+                        command = message['command']
+                        if command == 'start_listening':
+                            self.logger.info("Starting STT listening")
+                            self._start_listening()
+                        elif command == 'stop_listening':
+                            self.logger.info("Stopping STT listening")
+                            self._stop_listening()
+                        elif command == 'shutdown':
+                            self.logger.info("Shutting down STT processor")
+                            self.running = False
+
+                await asyncio.sleep(0.01)  # Small sleep to prevent CPU hogging
+
+            except queue.Empty:
+                pass
+            except Exception as e:
+                self.logger.error(f"Error processing audio data: {str(e)}")
 
     def _process_text(self, full_sentence):
         prev_text = ""
         full_sentence = self._preprocess_text(full_sentence)
-        message = json.dumps({
+        print(f"Sentence: {full_sentence}")
+        self.output_queue.put({
             'type': 'fullSentence',
             'text': full_sentence
         })
-        # Use the passed event loop here
-        asyncio.run_coroutine_threadsafe(self.websocket.put(message), self.loop)
-
 
     def _process_audio_data(self, audio_data):
         """Process audio data received from WebSocket"""
@@ -318,13 +320,6 @@ class STTProcessor(threading.Thread):
             'is_final': False
         })
 
-        # Send to WebSocket clients
-        message = json.dumps({
-            'type': 'realtime',
-            'text': text
-        })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
-
         # Log the message
         timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
         if self.config.get('extended_logging', False):
@@ -344,13 +339,6 @@ class STTProcessor(threading.Thread):
             'is_final': True
         })
 
-        # Send to WebSocket clients
-        message = json.dumps({
-            'type': 'fullSentence',
-            'text': text
-        })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
-
         # Log the message
         timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
         if self.config.get('extended_logging', False):
@@ -362,31 +350,27 @@ class STTProcessor(threading.Thread):
 
     def _on_recording_start(self):
         """Handle recording start event"""
-        message = json.dumps({
+        self.output_queue.put({
             'type': 'recording_start'
         })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
 
     def _on_recording_stop(self):
         """Handle recording stop event"""
-        message = json.dumps({
+        self.output_queue.put({
             'type': 'recording_stop'
         })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
 
     def _on_vad_detect_start(self):
         """Handle VAD detection start event"""
-        message = json.dumps({
+        self.output_queue.put({
             'type': 'vad_detect_start'
         })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
 
     def _on_vad_detect_stop(self):
         """Handle VAD detection stop event"""
-        message = json.dumps({
+        self.output_queue.put({
             'type': 'vad_detect_stop'
         })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
 
     def _on_transcription_start(self, audio_bytes):
         """Handle transcription start event"""
@@ -395,30 +379,36 @@ class STTProcessor(threading.Thread):
             'type': 'transcription_start',
             'audio_bytes_base64': bytes_b64
         })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
+        #asyncio.run_coroutine_threadsafe(self.websocket.send(message), self.loop)
 
     def _on_turn_detection_start(self):
         print("&&& stt_server on_turn_detection_start")
-        message = json.dumps({
+        self.output_queue.put({
             'type': 'start_turn_detection'
         })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
 
     def _on_turn_detection_stop(self):
         print("&&& stt_server on_turn_detection_stop")
-        message = json.dumps({
+        self.output_queue.put({
             'type': 'stop_turn_detection'
         })
-        asyncio.run_coroutine_threadsafe(self.websocket.broadcast_message(message), self.loop)
 
     def stop(self):
         """Stop the STT processor"""
+        if not self.running:
+            return
+
         self.running = False
+        print("Stopping STT processor...")
         if self.recorder:
             try:
-                self.recorder.abort()
+                self.recorder.clear_audio_queue()
+                print("Call stop")
                 self.recorder.stop()
+                print("Call shutdown")
                 self.recorder.shutdown()
-                self.logger.info("STT recorder stopped")
+                print("STT recorder stopped")
             except Exception as e:
-                self.logger.error(f"Error stopping recorder: {str(e)}")
+                print(f"Error stopping recorder: {str(e)}")
+
+        self.join(500)

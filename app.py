@@ -85,7 +85,9 @@ def start_session():
         }
         print(f"Starting session with config: {session_config}")
         ws_session = WebsocketSession(
-            config=session_config,
+            stt_config=stt_config,
+            translation_config=translation_config,
+            tts_config=tts_config,
             websocket_port=port,
         )
         print(f"Starting WebSocket session on port {port}")
@@ -117,7 +119,7 @@ def stop_session(session_id):
     """Stop an active session"""
     if session_id in active_sessions:
         session = active_sessions[session_id]
-        session['websocket_server'].stop()
+        session['ws_session'].stop()
         del active_sessions[session_id]
         return jsonify({'status': 'success', 'message': 'Session stopped'})
     else:
