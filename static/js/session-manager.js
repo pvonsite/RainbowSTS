@@ -96,7 +96,7 @@ class SessionManager {
     }
 
     async startListening() {
-        if (this.websocketHandler.isConnected()) {
+        if (this.websocketHandler.isSocketReady()) {
             try {
                 const deviceId = this.audioDeviceManager.getSelectedDeviceId();
                 await this.audioRecorder.startRecording(deviceId);
@@ -111,7 +111,7 @@ class SessionManager {
     }
 
     stopListening() {
-        if (this.websocketHandler.isConnected()) {
+        if (this.websocketHandler.isSocketReady()) {
             this.audioRecorder.stopRecording();
             this.websocketHandler.sendCommand('stop_listening');
             this.startListeningBtn.disabled = false;

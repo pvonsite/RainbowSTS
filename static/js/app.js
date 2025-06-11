@@ -2,9 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize components
     const audioDeviceManager = new AudioDeviceManager();
     const sttModelManager = new STTModelManager();
-    //const websocketHandler = new WebSocketHandler();
-    // const audioRecorder = new AudioRecorder(websocketHandler);
-    // const sessionManager = new SessionManager(audioDeviceManager, websocketHandler, audioRecorder);
+    const websocketHandler = new WebSocketHandler();
+    const audioRecorder = new AudioRecorder(websocketHandler);
+    const sessionManager = new SessionManager(audioDeviceManager, websocketHandler, audioRecorder);
 
     console.log('Load audio device list');
     // Load audio devices on startup

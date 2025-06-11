@@ -29,9 +29,10 @@ class AudioRecorder {
             this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     this.audioChunks.push(event.data);
-
-                    // Process and send audio data
-                    this.processAudioChunk(event.data);
+                    if (this.websocketHandler.isConnected()) {
+                        // Process and send audio data
+                        this.processAudioChunk(event.data);
+                    }
                 }
             };
 
@@ -87,7 +88,7 @@ class AudioRecorder {
             ]);
 
             // Send the combined data
-            this.websocketHandler.sendAudioData(combined.buffer);
+            this.websocketHandler.getWebSocket().send(combined.buffer);
         };
 
         reader.readAsArrayBuffer(audioBlob);
