@@ -1,9 +1,14 @@
+import asyncio
 import logging
+import sys
 import uuid
 
 from flask import Flask, render_template, request, jsonify
 
 from ws_session import WebsocketSession
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 MODELS = [
     'tiny',
@@ -24,6 +29,7 @@ MODELS = [
     'turbo',
 ]
 
+logger = logging.getLogger(__name__)
 app = Flask(__name__, static_folder='static')
 
 # Store active sessions
@@ -56,6 +62,8 @@ def start_session():
         # TODO: fill this later
         stt_config = {
             'input_device_id': config.get('input_device_index'),
+            'model': config.get('stt_model', 'base'),
+            'language': config.get('stt_language', 'en'),
         }
 
         translation_config = {
@@ -75,13 +83,14 @@ def start_session():
             'translation': translation_config,
             'tts': tts_config,
         }
-
+        print(f"Starting session with config: {session_config}")
         ws_session = WebsocketSession(
             config=session_config,
             websocket_port=port,
         )
-        logging.log(logging.INFO, f"Starting WebSocket session on port {port}")
+        print(f"Starting WebSocket session on port {port}")
         ws_session.start()
+        print("WebSocket session creation is success")
 
         # Save session information
         active_sessions[session_id] = {
