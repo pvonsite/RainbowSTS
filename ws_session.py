@@ -4,7 +4,10 @@ import queue
 import logging
 import json
 import asyncio
+import time
+
 import websockets
+from component import stt
 
 
 class WebsocketSession:
@@ -29,24 +32,28 @@ class WebsocketSession:
         self.tts_output_queue = queue.Queue()  # Audio data out
         self.websocket_output_queue = queue.Queue()  # Messages to send to client
 
+        print("Create STT processor")
         # Create component instances
-        self.stt_processor = STTProcessor(
-            config.get('stt_config', {}),
+        self.stt_processor = stt.STTProcessor(
+            config.get('stt', {}),
+            None, # TODO: later we can pass a websocket if needed
             self.stt_input_queue,
             self.stt_to_translator_queue
         )
 
-        self.translator = TextTranslator(
-            config.get('translation_config', {}),
-            self.stt_to_translator_queue,
-            self.translator_to_tts_queue
-        )
+        # self.translator = TextTranslator(
+        #     config.get('translation_config', {}),
+        #     self.stt_to_translator_queue,
+        #     self.translator_to_tts_queue
+        # )
+        self.translator = None
 
-        self.tts_processor = TTSProcessor(
-            config.get('tts_config', {}),
-            self.translator_to_tts_queue,
-            self.tts_output_queue
-        )
+        # self.tts_processor = TTSProcessor(
+        #     config.get('tts_config', {}),
+        #     self.translator_to_tts_queue,
+        #     self.tts_output_queue
+        # )
+        self.tts_processor = None
 
         # WebSocket server
         self.websocket_server = None
@@ -144,7 +151,7 @@ class WebsocketSession:
 
     async def _run_websocket_server(self):
         """Run the WebSocket server"""
-        self.logger.info(f"Starting WebSocket server on port {self.websocket_port}")
+        print(f"Starting WebSocket server on port {self.websocket_port}")
         async with websockets.serve(
                 self._handle_websocket_client,
                 "localhost",
@@ -176,23 +183,26 @@ class WebsocketSession:
         try:
             self.running = True
             self.logger.info("Starting components")
+            print("Starting components")
 
             # Start the processors
-            self.stt_processor.start()
-            self.translator.start()
-            self.tts_processor.start()
+            # self.stt_processor.start()
+            # self.translator.start()
+            # self.tts_processor.start()
 
             # Start the queue monitor in a separate thread
             self.queue_monitor_thread = threading.Thread(
                 target=self._monitor_component_queues,
                 daemon=True
             )
+            print("Starting queue monitor thread")
             self.queue_monitor_thread.start()
 
             # Start the WebSocket server in the asyncio event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            print("Run asyncio event loop for WebSocket server")
+            loop = asyncio.get_event_loop()
             loop.run_until_complete(self._run_websocket_server())
+            print("End asyncio event loop for WebSocket server")
 
         except Exception as e:
             self.logger.error(f"Error starting session: {str(e)}")
