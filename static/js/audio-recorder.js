@@ -28,8 +28,8 @@ class AudioRecorder {
 
             this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
-                    this.audioChunks.push(event.data);
-                    if (this.websocketHandler.isConnected) {
+                    //this.audioChunks.push(event.data);
+                    if (this.websocketHandler.isSocketReady()) {
                         // Process and send audio data
                         this.processAudioChunk(event.data);
                     }

@@ -111,12 +111,12 @@ class STTProcessor(threading.Thread):
                 on_turn_detection_stop=self._on_turn_detection_stop,
             )
 
-            self.logger.info(f"{bcolors.OKGREEN}{bcolors.BOLD}STT processor initialized{bcolors.ENDC}")
+            print(f"{bcolors.OKGREEN}{bcolors.BOLD}STT processor initialized{bcolors.ENDC}")
             # Run the coroutine in this thread's event loop
             loop.run_until_complete(self.process_input_queue())
 
         except Exception as e:
-            self.logger.error(f"Error in STT processor: {str(e)}", exc_info=True)
+            print(f"Error in STT processor: {str(e)}")
         finally:
             self.stop()
             print("STT processor stopped")
@@ -137,13 +137,13 @@ class STTProcessor(threading.Thread):
                     elif message['type'] == 'command':
                         command = message['command']
                         if command == 'start_listening':
-                            self.logger.info("Starting STT listening")
+                            print("Starting STT listening")
                             self._start_listening()
                         elif command == 'stop_listening':
-                            self.logger.info("Stopping STT listening")
+                            print("Stopping STT listening")
                             self._stop_listening()
                         elif command == 'shutdown':
-                            self.logger.info("Shutting down STT processor")
+                            print("Shutting down STT processor")
                             self.running = False
 
                 await asyncio.sleep(0.01)  # Small sleep to prevent CPU hogging
@@ -151,7 +151,7 @@ class STTProcessor(threading.Thread):
             except queue.Empty:
                 pass
             except Exception as e:
-                self.logger.error(f"Error processing audio data: {str(e)}")
+                print(f"Error processing audio data: {str(e)}")
 
     def _process_text(self, full_sentence):
         prev_text = ""
@@ -192,7 +192,7 @@ class STTProcessor(threading.Thread):
                             )
                             self.recorder.feed_audio(processed_audio)
                     except json.JSONDecodeError:
-                        self.logger.error("Failed to parse audio metadata JSON")
+                        print("Failed to parse audio metadata JSON")
                 else:
                     # No metadata, assume default format
                     self.recorder.feed_audio(audio_data)
@@ -201,7 +201,7 @@ class STTProcessor(threading.Thread):
                 self.recorder.feed_audio(audio_data)
 
         except Exception as e:
-            self.logger.error(f"Error processing audio data: {str(e)}")
+            print(f"Error processing audio data: {str(e)}")
 
     def _decode_and_resample(self, audio_data, original_sample_rate, target_sample_rate):
         """Decode and resample audio data if necessary"""

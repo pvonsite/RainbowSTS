@@ -63,7 +63,7 @@ def start_session():
         stt_config = {
             'input_device_id': config.get('input_device_index'),
             'model': config.get('stt_model', 'base'),
-            'language': config.get('stt_language', 'en'),
+            'language': config.get('source_language', 'en'),
         }
 
         translation_config = {
