@@ -1,8 +1,28 @@
-from flask import Flask, render_template, request, jsonify
-from stt import stt_socket
-import threading
+import logging
 import uuid
-import json
+
+from flask import Flask, render_template, request, jsonify
+
+from ws_session import WebsocketSession
+
+MODELS = [
+    'tiny',
+    'tiny.en',
+    'base',
+    'base.en',
+    'small',
+    'small.en',
+    'medium',
+    'medium.en',
+    'large-v1',
+    'large-v2',
+    'large-v3',
+    'large',
+    'distil-large-v2',
+    'distil-medium',
+    'larget-v3-turbo',
+    'turbo',
+]
 
 app = Flask(__name__, static_folder='static')
 
@@ -16,66 +36,63 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/models')
+def get_models():
+    """Return available STT models"""
+    try:
+        return jsonify({'status': 'success', 'models': MODELS})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/start_session', methods=['POST'])
 def start_session():
     """Start a new STT and translation session"""
     try:
         config = request.json
-
         # Generate a unique session ID
         session_id = str(uuid.uuid4())
 
         # Extract configuration parameters
-        recorder_config = {
-            'compute_type': 'int8_float32',
-            'spinner': False,
-            'use_microphone': True,
-            'model': config.get('stt_model', 'base'),
-            'language': config.get('source_language', 'en'),
-            'silero_sensitivity': 0.05,
-            'webrtc_sensitivity': 3,
-            'min_length_of_recording': 1.1,
-            'min_gap_between_recordings': 0,
-            'enable_realtime_transcription': True,
-            'realtime_processing_pause': 0.5,
-            'silero_deactivity_detection': True,
-            'early_transcription_on_silence': 0.2,
-            'beam_size': 5,
-            'beam_size_realtime': 3,
-            'no_log_file': True,
-            'initial_prompt': 'Add periods only for complete sentences. Use ellipsis (...) for unfinished thoughts or unclear endings.'
+        # TODO: fill this later
+        stt_config = {
+            'input_device_id': config.get('input_device_index'),
         }
-
-        # Handle input device selection
-        input_device_id = config.get('input_device_index')
-        if input_device_id:
-            recorder_config['input_device_index'] = input_device_id
-
-        port = config.get('websocket_port', 8765)
 
         translation_config = {
-            'target_language': config.get('target_language', 'fr')
+            'model': config.get('translation_model', 'm2m100_418m'),
+            'source_language': config.get('source_language', 'en'),
+            'target_language': config.get('target_language', 'vi'),
         }
 
-        # Start WebSocket server in a separate thread
-        websocket_server = stt_socket.RealtimeSTTWebSocket(
-            recorder_config=recorder_config,
-            host="localhost",
-            port=port,
-            on_text_callback=None  # We can add a callback for translation if needed
+        # TODO: fill this later
+        tts_config = {}
+
+        # Determine which WebSocket port to use
+        port = config.get('websocket_port', 8765)
+
+        session_config = {
+            'stt': stt_config,
+            'translation': translation_config,
+            'tts': tts_config,
+        }
+
+        ws_session = WebsocketSession(
+            config=session_config,
+            websocket_port=port,
         )
-        websocket_server.start()
+        logging.log(logging.INFO, f"Starting WebSocket session on port {port}")
+        ws_session.start()
 
         # Save session information
         active_sessions[session_id] = {
-            'websocket_server': websocket_server,
-            'config': config,
+            'ws_session': ws_session,
             'websocket_port': port
         }
 
         return jsonify({
             'status': 'success',
             'session_id': session_id,
+            'message': 'Session creation completed, waiting for WebSocket connection',
             'websocket_url': f"ws://localhost:{port}"
         })
 
