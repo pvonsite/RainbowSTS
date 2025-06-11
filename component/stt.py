@@ -10,6 +10,7 @@ from datetime import datetime
 from difflib import SequenceMatcher
 from collections import deque
 
+import torch
 from RealtimeSTT import AudioToTextRecorder
 
 
@@ -38,7 +39,6 @@ class STTProcessor(threading.Thread):
             output_queue: Queue for sending transcribed text
         """
         super().__init__()
-        logging.getLogger("RealtimeSTT").setLevel(logging.DEBUG)
 
         self.config = config
         self.input_queue = input_queue
@@ -83,10 +83,19 @@ class STTProcessor(threading.Thread):
             for key, value in self.config.items():
                 print(f"    {bcolors.OKBLUE}{key}{bcolors.ENDC}: {value}")
 
+            # Check if GPU is available
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print(f"Using device: {device}")
+
+            compute_type = 'int8_float32' if device.type == 'cpu' else 'float32'
+
             # Configure STT recorder
             self.recorder = AudioToTextRecorder(
-                compute_type=self.config.get('compute_type', 'int8_float32'),
+                level=logging.DEBUG,
+                compute_type=compute_type,
+                device=device.type,
                 model=self.config.get('model', 'base'),
+                realtime_model_type=self.config.get('model', 'base'),
                 language=self.config.get('language', 'en'),
                 silero_sensitivity=self.config.get('silero_sensitivity', 0.05),
                 webrtc_sensitivity=self.config.get('webrtc_sensitivity', 3),

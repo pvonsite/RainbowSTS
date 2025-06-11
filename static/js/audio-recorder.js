@@ -23,7 +23,6 @@ class AudioRecorder {
 
             const audioContext = new AudioContext();
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            const input = audioContext.createMediaStreamSource(mediaStream);
 
             this.mediaRecorder = new MediaRecorder(stream);
             this.audioChunks = [];
@@ -40,7 +39,7 @@ class AudioRecorder {
 
             // Use small time slices for real-time processing
             this.mediaRecorder.start(100);
-            this.isRecording = true;
+            this.isRecording = true
 
             this.statusElement.textContent = 'Status: Recording...';
             return true;
@@ -69,7 +68,7 @@ class AudioRecorder {
                 pcm16Data[i] = Math.max(-1, Math.min(1, float32Array[i])) * 0x7FFF;
             }
 
-            const metadata = JSON.stringify({sampleRate});
+            const metadata = JSON.stringify({ sampleRate: 16000 });
             const metadataLength = new Uint32Array([metadata.length]);
             const metadataBuffer = new TextEncoder().encode(metadata);
 
@@ -81,7 +80,7 @@ class AudioRecorder {
             message.set(metadataBuffer, metadataLength.byteLength);
             message.set(new Uint8Array(pcm16Data.buffer), metadataLength.byteLength + metadataBuffer.byteLength);
 
-            dataSocket.send(message);
+            this.websocketHandler.getWebSocket().send(message);
         }
     }
 }
