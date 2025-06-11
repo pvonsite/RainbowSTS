@@ -21,7 +21,9 @@ class AudioRecorder {
                 }
             };
 
+            const audioContext = new AudioContext();
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const input = audioContext.createMediaStreamSource(mediaStream);
 
             this.mediaRecorder = new MediaRecorder(stream);
             this.audioChunks = [];
@@ -31,7 +33,7 @@ class AudioRecorder {
                     //this.audioChunks.push(event.data);
                     if (this.websocketHandler.isSocketReady()) {
                         // Process and send audio data
-                        this.processAudioChunk(event.data);
+                        this.processAudioChunk(event.data, audioContext.sampleRate);
                     }
                 }
             };
@@ -59,38 +61,27 @@ class AudioRecorder {
     }
 
     processAudioChunk(audioChunk) {
-        // Convert audio chunk to format expected by server
-        const audioBlob = new Blob([audioChunk], { type: 'audio/webm' });
-        const reader = new FileReader();
+        if (this.websocketHandler.isSocketReady()) {
+            const float32Array = new Float32Array(audioChunk);
+            const pcm16Data = new Int16Array(float32Array.length);
 
-        reader.onloadend = () => {
-            // Get the audio data as ArrayBuffer
-            const audioData = reader.result;
+            for (let i = 0; i < float32Array.length; i++) {
+                pcm16Data[i] = Math.max(-1, Math.min(1, float32Array[i])) * 0x7FFF;
+            }
 
-            // Create metadata
-            const metadata = {
-                sampleRate: 48000, // Standard sample rate, adjust if needed
-                channels: 1,       // Mono audio
-                format: 'webm'
-            };
-            const metadataStr = JSON.stringify(metadata);
-            const metadataBytes = new TextEncoder().encode(metadataStr);
+            const metadata = JSON.stringify({sampleRate});
+            const metadataLength = new Uint32Array([metadata.length]);
+            const metadataBuffer = new TextEncoder().encode(metadata);
 
-            // Create a buffer with metadata length (4 bytes) + metadata + audio data
-            const metadataLength = new ArrayBuffer(4);
-            new DataView(metadataLength).setInt32(0, metadataBytes.length, true);
+            const message = new Uint8Array(
+                metadataLength.byteLength + metadataBuffer.byteLength + pcm16Data.byteLength
+            );
 
-            // Combine all parts into a single ArrayBuffer
-            const combined = new Uint8Array([
-                ...new Uint8Array(metadataLength),
-                ...metadataBytes,
-                ...new Uint8Array(audioData)
-            ]);
+            message.set(new Uint8Array(metadataLength.buffer), 0);
+            message.set(metadataBuffer, metadataLength.byteLength);
+            message.set(new Uint8Array(pcm16Data.buffer), metadataLength.byteLength + metadataBuffer.byteLength);
 
-            // Send the combined data
-            this.websocketHandler.getWebSocket().send(combined.buffer);
-        };
-
-        reader.readAsArrayBuffer(audioBlob);
+            dataSocket.send(message);
+        }
     }
 }
