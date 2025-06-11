@@ -5,6 +5,7 @@ torch
 torchaudio
 transformers
 
-sentencepiece
+sentencepiece~=0.2.0
 
 flask
+websockets~=15.0.1
