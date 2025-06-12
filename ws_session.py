@@ -135,13 +135,16 @@ class WebsocketSession:
             try:
                 while not self.stt_output_queue.empty():
                     message = await self.stt_output_queue.get()
+                    print(f"Sending message to client: {message}")
+                    await websocket.send(json.dumps(message))
                     if 'command' in message and message['command'] == 'translate':
                         # Forward the transcription to the translator
-                        asyncio.run_coroutine_threadsafe(
-                            self.translator_input_queue.put({ 'type': 'transcription', 'text': message['text'] }),
-                            self.translator.loop
-                        )
-                    await websocket.send(json.dumps(message))
+                        # asyncio.run_coroutine_threadsafe(
+                        #     self.translator_input_queue.put(message),
+                        #     self.translator.loop
+                        # )
+                        print("temporary disable translation")
+                    self.stt_output_queue.task_done()
 
                 # Short delay to prevent CPU hogging
                 await asyncio.sleep(0.05)

@@ -84,16 +84,10 @@ class WebSocketHandler {
                         case 'realtime':
                         case 'transcription':
                             // Realtime transcription updates
-                            this._notifyListeners('transcription', {
+                            this._notifyListeners('realtime', {
                                 text: data.text,
                                 isFinal: false
                             });
-
-                            // Update UI with original text
-                            const originalTextElement = document.getElementById('original-text');
-                            if (originalTextElement) {
-                                originalTextElement.textContent = data.text;
-                            }
                             break;
 
                         case 'fullSentence':
@@ -102,12 +96,6 @@ class WebSocketHandler {
                                 text: data.text,
                                 isFinal: true
                             });
-
-                            // Update UI with final original text
-                            const finalOriginalTextElement = document.getElementById('original-text');
-                            if (finalOriginalTextElement) {
-                                finalOriginalTextElement.textContent = data.text;
-                            }
                             break;
 
                         case 'translation':

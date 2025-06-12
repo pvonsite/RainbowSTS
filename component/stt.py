@@ -111,6 +111,7 @@ class STTProcessor(threading.Thread):
 
         # Event loop from the websocket
         self.loop = None # asyncio.get_event_loop()
+        self.recorder_thread = None
         print("Constructing STT completed")
 
 
@@ -168,6 +169,18 @@ class STTProcessor(threading.Thread):
             )
 
             print(f"{bcolors.OKGREEN}{bcolors.BOLD}STT processor initialized{bcolors.ENDC}")
+
+            def _recorder_task():
+                while self.running:
+                    self.recorder.text(self._process_text)
+
+            self.recorder_thread = threading.Thread(
+                target=_recorder_task,
+                name="STTRecorderThread",
+                daemon=True
+            )
+            self.recorder_thread.start()
+
             # Run the coroutine in this thread's event loop
             self.loop.run_until_complete(self.process_input_queue())
 
@@ -203,7 +216,7 @@ class STTProcessor(threading.Thread):
                             self.running = False
 
                 await asyncio.sleep(0.01)  # Small sleep to prevent CPU hogging
-                self.recorder.text(self._process_text)
+                # self.recorder.text(self._process_text)
 
             except queue.Empty:
                 pass
@@ -213,6 +226,7 @@ class STTProcessor(threading.Thread):
     def _process_text(self, full_sentence):
         self.prev_text = ""
         full_sentence = _preprocess_text(full_sentence)
+        print(f"Full sentence {full_sentence}")
         asyncio.run_coroutine_threadsafe(
             self.output_queue.put({
                 'type': 'fullSentence',
@@ -383,6 +397,8 @@ class STTProcessor(threading.Thread):
         print("Stopping STT processor...")
         if self.recorder:
             try:
+                if self.recorder_thread:
+                    self.recorder_thread.join(500)
                 self.recorder.clear_audio_queue()
                 print("Call stop")
                 self.recorder.stop()

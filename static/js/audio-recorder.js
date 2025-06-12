@@ -28,7 +28,6 @@ class AudioRecorder {
             const recorderNode = new AudioWorkletNode(audioContext, 'recorder-worklet');
 
             recorderNode.port.onmessage = (event) => {
-                console.log(audioContext.sampleRate)
                 this.processAudioChunk(event.data, audioContext.sampleRate)
             }
 

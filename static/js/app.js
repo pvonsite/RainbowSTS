@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const websocketHandler = new WebSocketHandler();
     const audioRecorder = new AudioRecorder(websocketHandler);
     const sessionManager = new SessionManager(audioDeviceManager, websocketHandler, audioRecorder);
+    const transcribeView = new TranscribeView(websocketHandler);
 
     console.log('Load audio device list');
     // Load audio devices on startup
