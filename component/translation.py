@@ -1,4 +1,5 @@
 # component/translation.py
+import asyncio
 import threading
 import queue
 import logging
@@ -14,7 +15,7 @@ logger.setLevel(logging.DEBUG)
 class TranslationProcessor(threading.Thread):
     """Translation processor that runs in its own thread"""
 
-    def __init__(self, config, input_queue, output_queue):
+    def __init__(self, config, input_queue : asyncio.Queue, output_queue : asyncio.Queue):
         """
         Initialize the translation processor
 
@@ -25,8 +26,8 @@ class TranslationProcessor(threading.Thread):
         """
         super().__init__()
         self.config = config
-        self.input_queue = input_queue
-        self.output_queue = output_queue
+        self.input_queue : asyncio.Queue = input_queue
+        self.output_queue : asyncio.Queue = output_queue
         self.daemon = True
         self.running = False
 
@@ -48,6 +49,7 @@ class TranslationProcessor(threading.Thread):
         # Initialize model and tokenizer as None, will load in run()
         self.model = None
         self.tokenizer = None
+        self.loop = None
 
         print(f"Initialized TranslationProcessor with device: {self.device}")
 
@@ -56,6 +58,7 @@ class TranslationProcessor(threading.Thread):
         try:
             self.running = True
             print("Translation processor starting...")
+            self.loop = asyncio.new_event_loop()
 
             # Load model and tokenizer
             start_time = time.time()

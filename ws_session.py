@@ -28,11 +28,13 @@ class WebsocketSession:
 
         # Set up queues for communication between components
         self.stt_input_queue = asyncio.Queue()  # Audio data in
-        self.stt_to_translator_queue = queue.Queue()  # Transcribed text
-        self.translator_to_tts_queue = queue.Queue()  # Translated text
+        self.stt_output_queue = asyncio.Queue()  # STT output (transcribed text, text events)
+
+        self.translator_input_queue = asyncio.Queue()  # Transcribed text, request for translation
+        self.translator_output_queue = asyncio.Queue()  # Translated text, translation events
+
         self.tts_output_queue = queue.Queue()  # Audio data out
         self.websocket_output_queue = queue.Queue()  # Messages to send to client
-        self.shared_queue = queue.Queue()  # Shared queue for inter-component communication
 
         # Start the queue monitor in a separate thread
         self.queue_monitor_thread = threading.Thread(
@@ -45,14 +47,14 @@ class WebsocketSession:
         self.stt_processor = stt.STTProcessor(
             stt_config,
             self.stt_input_queue,
-            self.shared_queue
+            self.stt_output_queue,
         )
 
         print("Create Translation processor")
         self.translator = translation.TranslationProcessor(
             translation_config,
-            self.stt_to_translator_queue,
-            self.shared_queue
+            self.translator_input_queue,
+            self.translator_output_queue
         )
 
         # self.tts_processor = TTSProcessor(
@@ -72,7 +74,7 @@ class WebsocketSession:
         """Handle a WebSocket client connection"""
         print(f"Client connected: {websocket}")
         self.clients.add(websocket)
-
+        send_task = None
         try:
             # Set up a task to send messages to this client
             send_task = asyncio.create_task(self._send_messages_to_client(websocket))
@@ -131,29 +133,14 @@ class WebsocketSession:
         """Send messages from the output queue to the client"""
         while True:
             try:
-                while not self.shared_queue.empty():
-                    message = self.shared_queue.get(block=False)
-                    print(message)
-                    if message['type'] == 'fullSentence':
-                        print(f"Sending transcription to client: {message}")
-                        # request translation for the transcription
-                        self.stt_to_translator_queue.put(message)
-                        # Currently, we're not sending audio back to client
-                        # But you could implement this if needed
-
-                    elif message['type'] == 'translation':
-                        print(f"Sending translation to client: {message}")
-                        # Send translation to TTS processor
-                        self.websocket_output_queue.put(message)
-                        # Currently, we're not sending audio back to client
-                        # But you could implement this if needed
-                    elif message['type'] == 'realtime':
-                        self.websocket_output_queue.put(message)
-
-
-                # Check the dedicated websocket queue
-                while not self.websocket_output_queue.empty():
-                    message = self.websocket_output_queue.get(block=False)
+                while not self.stt_output_queue.empty():
+                    message = await self.stt_output_queue.get()
+                    if 'command' in message and message['command'] == 'translate':
+                        # Forward the transcription to the translator
+                        asyncio.run_coroutine_threadsafe(
+                            self.translator_input_queue.put({ 'type': 'transcription', 'text': message['text'] }),
+                            self.translator.loop
+                        )
                     await websocket.send(json.dumps(message))
 
                 # Short delay to prevent CPU hogging
@@ -205,7 +192,7 @@ class WebsocketSession:
 
             # Start the processors
             self.stt_processor.start()
-            self.translator.start()
+            #self.translator.start()
             # self.tts_processor.start()
 
             print("Starting queue monitor thread")
