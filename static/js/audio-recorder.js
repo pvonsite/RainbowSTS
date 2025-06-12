@@ -22,23 +22,19 @@ class AudioRecorder {
             };
 
             const audioContext = new AudioContext();
+            await audioContext.audioWorklet.addModule('static/js/recorder-worklet.js');
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const input = audioContext.createMediaStreamSource(stream);
+            const recorderNode = new AudioWorkletNode(audioContext, 'recorder-worklet');
 
-            this.mediaRecorder = new MediaRecorder(stream);
-            this.audioChunks = [];
+            recorderNode.port.onmessage = (event) => {
+                console.log(audioContext.sampleRate)
+                this.processAudioChunk(event.data, audioContext.sampleRate)
+            }
 
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    //this.audioChunks.push(event.data);
-                    if (this.websocketHandler.isSocketReady()) {
-                        // Process and send audio data
-                        this.processAudioChunk(event.data, audioContext.sampleRate);
-                    }
-                }
-            };
+            input.connect(recorderNode);
+            recorderNode.connect(audioContext.destination);
 
-            // Use small time slices for real-time processing
-            this.mediaRecorder.start(100);
             this.isRecording = true
 
             this.statusElement.textContent = 'Status: Recording...';
@@ -68,7 +64,7 @@ class AudioRecorder {
                 pcm16Data[i] = Math.max(-1, Math.min(1, float32Array[i])) * 0x7FFF;
             }
 
-            const metadata = JSON.stringify({ sampleRate: 16000 });
+            const metadata = JSON.stringify({ sampleRate: 48000, channels: 1, format: 'webm' });
             const metadataLength = new Uint32Array([metadata.length]);
             const metadataBuffer = new TextEncoder().encode(metadata);
 

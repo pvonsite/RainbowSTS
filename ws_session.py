@@ -52,7 +52,7 @@ class WebsocketSession:
         self.translator = translation.TranslationProcessor(
             translation_config,
             self.stt_to_translator_queue,
-            self.translator_to_tts_queue
+            self.shared_queue
         )
 
         # self.tts_processor = TTSProcessor(
@@ -133,36 +133,23 @@ class WebsocketSession:
             try:
                 while not self.shared_queue.empty():
                     message = self.shared_queue.get(block=False)
-                    if message['type'] == 'transcription':
+                    print(message)
+                    if message['type'] == 'fullSentence':
                         print(f"Sending transcription to client: {message}")
                         # request translation for the transcription
                         self.stt_to_translator_queue.put(message)
                         # Currently, we're not sending audio back to client
                         # But you could implement this if needed
-                        pass
 
-                # Check if there are messages to process from STT or translation
-                while not self.stt_to_translator_queue.empty():
-                    message = self.stt_to_translator_queue.get(block=False)
-                    if message['type'] == 'transcription':
-                        print(f"Sending transcription to client: {message}")
-                        # Send transcription to client
-                        await websocket.send(json.dumps({
-                            'type': 'transcription',
-                            'text': message['text'],
-                            'is_final': message.get('is_final', False)
-                        }))
+                    elif message['type'] == 'translation':
+                        print(f"Sending translation to client: {message}")
+                        # Send translation to TTS processor
+                        self.websocket_output_queue.put(message)
+                        # Currently, we're not sending audio back to client
+                        # But you could implement this if needed
+                    elif message['type'] == 'realtime':
+                        self.websocket_output_queue.put(message)
 
-                while not self.translator_to_tts_queue.empty():
-                    message = self.translator_to_tts_queue.get(block=False)
-                    if message['type'] == 'translation':
-                        # Send translation to client
-                        await websocket.send(json.dumps({
-                            'type': 'translation',
-                            'original': message['original'],
-                            'translated': message['translated'],
-                            'is_final': message.get('is_final', False)
-                        }))
 
                 # Check the dedicated websocket queue
                 while not self.websocket_output_queue.empty():

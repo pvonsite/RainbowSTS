@@ -26,6 +26,53 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
+def _decode_and_resample(audio_data, original_sample_rate, target_sample_rate):
+    """Decode and resample audio data if necessary"""
+    from scipy.signal import resample
+
+    # If sample rates match, no resampling needed
+    if original_sample_rate == target_sample_rate:
+        return audio_data
+
+    # Convert bytes to numpy array
+    audio_np = np.frombuffer(audio_data, dtype=np.int16)
+
+    # Calculate the number of samples after resampling
+    num_original_samples = len(audio_np)
+    num_target_samples = int(num_original_samples * target_sample_rate / original_sample_rate)
+
+    # Resample the audio
+    resampled_audio = resample(audio_np, num_target_samples)
+
+    # Convert back to bytes
+    return resampled_audio.astype(np.int16).tobytes()
+
+
+def _preprocess_text(text):
+    """Preprocess the transcribed text"""
+    # Remove leading whitespaces
+    text = text.lstrip()
+
+    # Remove starting ellipses if present
+    if text.startswith("..."):
+        text = text[3:]
+
+    if text.endswith("...'."):
+        text = text[:-1]
+
+    if text.endswith("...'"):
+        text = text[:-1]
+
+    # Remove any leading whitespaces again after ellipses removal
+    text = text.lstrip()
+
+    # Uppercase the first letter
+    if text:
+        text = text[0].upper() + text[1:]
+
+    return text
+
+
 class STTProcessor(threading.Thread):
     """Speech-to-Text processor that runs in its own thread"""
 
@@ -91,7 +138,7 @@ class STTProcessor(threading.Thread):
 
             # Configure STT recorder
             self.recorder = AudioToTextRecorder(
-                input_device_index=2,
+                use_microphone=False,
                 level=logging.INFO,
                 spinner=False,
                 compute_type=compute_type,
@@ -158,6 +205,7 @@ class STTProcessor(threading.Thread):
                             self.running = False
 
                 await asyncio.sleep(0.01)  # Small sleep to prevent CPU hogging
+                #self.recorder.text(self._process_text)
 
             except queue.Empty:
                 pass
@@ -165,11 +213,12 @@ class STTProcessor(threading.Thread):
                 print(f"Error processing audio data: {str(e)}")
 
     def _process_text(self, full_sentence):
-        prev_text = ""
-        full_sentence = self._preprocess_text(full_sentence)
+        self.prev_text = ""
+        full_sentence = _preprocess_text(full_sentence)
         print(f"Sentence: {full_sentence}")
         self.output_queue.put({
             'type': 'fullSentence',
+            'command': 'translate',
             'text': full_sentence
         })
 
@@ -196,7 +245,7 @@ class STTProcessor(threading.Thread):
                         # Process the audio with the recorder
                         if self.recorder:
                             # Resample if needed and feed to recorder
-                            processed_audio = self._decode_and_resample(
+                            processed_audio = _decode_and_resample(
                                 audio_bytes,
                                 sample_rate,
                                 self.recorder.sample_rate
@@ -214,27 +263,6 @@ class STTProcessor(threading.Thread):
         except Exception as e:
             print(f"Error processing audio data: {str(e)}")
 
-    def _decode_and_resample(self, audio_data, original_sample_rate, target_sample_rate):
-        """Decode and resample audio data if necessary"""
-        from scipy.signal import resample
-
-        # If sample rates match, no resampling needed
-        if original_sample_rate == target_sample_rate:
-            return audio_data
-
-        # Convert bytes to numpy array
-        audio_np = np.frombuffer(audio_data, dtype=np.int16)
-
-        # Calculate the number of samples after resampling
-        num_original_samples = len(audio_np)
-        num_target_samples = int(num_original_samples * target_sample_rate / original_sample_rate)
-
-        # Resample the audio
-        resampled_audio = resample(audio_np, num_target_samples)
-
-        # Convert back to bytes
-        return resampled_audio.astype(np.int16).tobytes()
-
     def _start_listening(self):
         """Start listening for audio"""
         if self.recorder:
@@ -249,33 +277,9 @@ class STTProcessor(threading.Thread):
             self.recorder.stop()
             self.recorder.clear_audio_queue()
 
-    def _preprocess_text(self, text):
-        """Preprocess the transcribed text"""
-        # Remove leading whitespaces
-        text = text.lstrip()
-
-        # Remove starting ellipses if present
-        if text.startswith("..."):
-            text = text[3:]
-
-        if text.endswith("...'."):
-            text = text[:-1]
-
-        if text.endswith("...'"):
-            text = text[:-1]
-
-        # Remove any leading whitespaces again after ellipses removal
-        text = text.lstrip()
-
-        # Uppercase the first letter
-        if text:
-            text = text[0].upper() + text[1:]
-
-        return text
-
     def _on_realtime_transcription(self, text):
         """Handle real-time transcription updates"""
-        text = self._preprocess_text(text)
+        text = _preprocess_text(text)
 
         if self.silence_timing:
             def ends_with_ellipsis(t):
@@ -326,7 +330,7 @@ class STTProcessor(threading.Thread):
 
         # Put the message in the output queue
         self.output_queue.put({
-            'type': 'transcription',
+            'type': 'realtime',
             'text': text,
             'is_final': False
         })
@@ -337,27 +341,6 @@ class STTProcessor(threading.Thread):
             print(f"  [{timestamp}] Realtime text: {bcolors.OKCYAN}{text}{bcolors.ENDC}\n", flush=True, end="")
         else:
             print(f"\r[{timestamp}] {bcolors.OKCYAN}{text}{bcolors.ENDC}", flush=True, end='')
-
-    def _on_transcription(self, text):
-        """Handle final transcription"""
-        self.prev_text = ""
-        text = self._preprocess_text(text)
-
-        # Put the message in the output queue
-        self.output_queue.put({
-            'type': 'transcription',
-            'text': text,
-            'is_final': True
-        })
-
-        # Log the message
-        timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-        if self.config.get('extended_logging', False):
-            print(
-                f"  [{timestamp}] Full text: {bcolors.BOLD}Sentence:{bcolors.ENDC} {bcolors.OKGREEN}{text}{bcolors.ENDC}\n",
-                flush=True, end="")
-        else:
-            print(f"\r[{timestamp}] {bcolors.BOLD}Sentence:{bcolors.ENDC} {bcolors.OKGREEN}{text}{bcolors.ENDC}\n")
 
     def _on_recording_start(self):
         """Handle recording start event"""

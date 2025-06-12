@@ -80,9 +80,10 @@ class TranslationProcessor(threading.Thread):
 
                         elif message['type'] == 'command':
                             command = message['command']
-                            if command == 'translate_now':
+                            if command == 'translate':
                                 # Force translation of current buffer
-                                self._translate_buffer()
+                                self.translation_buffer.append(message['text'])
+                                self.sentence_timestamps.append(time.time())
                             elif command == 'shutdown':
                                 # Translate any remaining text and exit
                                 if self.translation_buffer:
