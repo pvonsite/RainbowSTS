@@ -4,6 +4,8 @@ import threading
 import queue
 import logging
 import time
+from typing import Callable
+
 import numpy as np
 import base64
 from datetime import datetime
@@ -26,22 +28,77 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
+def _decode_and_resample(audio_data, original_sample_rate, target_sample_rate):
+    """Decode and resample audio data if necessary"""
+    from scipy.signal import resample
+
+    # If sample rates match, no resampling needed
+    if original_sample_rate == target_sample_rate:
+        return audio_data
+
+    # Convert bytes to numpy array
+    audio_np = np.frombuffer(audio_data, dtype=np.int16)
+
+    # Calculate the number of samples after resampling
+    num_original_samples = len(audio_np)
+    num_target_samples = int(num_original_samples * target_sample_rate / original_sample_rate)
+
+    # Resample the audio
+    resampled_audio = resample(audio_np, num_target_samples)
+
+    # Convert back to bytes
+    return resampled_audio.astype(np.int16).tobytes()
+
+
+def _preprocess_text(text):
+    """Preprocess the transcribed text"""
+    # Remove leading whitespaces
+    text = text.lstrip()
+
+    # Remove starting ellipses if present
+    if text.startswith("..."):
+        text = text[3:]
+
+    if text.endswith("...'."):
+        text = text[:-1]
+
+    if text.endswith("...'"):
+        text = text[:-1]
+
+    # Remove any leading whitespaces again after ellipses removal
+    text = text.lstrip()
+
+    # Uppercase the first letter
+    if text:
+        text = text[0].upper() + text[1:]
+
+    return text
+
+
+def _on_transcription_start(audio_bytes):
+    """Handle transcription start event"""
+    bytes_b64 = base64.b64encode(audio_bytes.tobytes()).decode('utf-8')
+    message = json.dumps({
+        'type': 'transcription_start',
+        'audio_bytes_base64': bytes_b64
+    })
+    #asyncio.run_coroutine_threadsafe(self.websocket.send(message), self.loop)
+
+
 class STTProcessor(threading.Thread):
     """Speech-to-Text processor that runs in its own thread"""
 
-    def __init__(self, config, input_queue : asyncio.Queue, output_queue : queue.Queue):
+    def __init__(self, config, output_queue : queue.Queue):
         """
         Initialize the STT processor
 
         Args:
             config: Configuration dictionary for STT
-            input_queue: Queue for receiving audio data
             output_queue: Queue for sending transcribed text
         """
         super().__init__()
 
         self.config = config
-        self.input_queue = input_queue
         self.output_queue = output_queue
         self.daemon = True
         self.running = False
@@ -55,16 +112,16 @@ class STTProcessor(threading.Thread):
         # Configuration for silence timing
         self.silence_timing = config.get('silence_timing', False)
         self.hard_break_even_on_background_noise = config.get('hard_break_even_on_background_noise', 10)
-        self.hard_break_even_on_background_noise_min_texts = config.get('hard_break_even_on_background_noise_min_texts',
-                                                                        5)
-        self.hard_break_even_on_background_noise_min_similarity = config.get(
-            'hard_break_even_on_background_noise_min_similarity', 0.8)
-        self.hard_break_even_on_background_noise_min_chars = config.get('hard_break_even_on_background_noise_min_chars',
-                                                                        10)
-
-        # Event loop from the websocket
-        self.loop = None # asyncio.get_event_loop()
+        self.hard_break_even_on_background_noise_min_texts = config.get('hard_break_even_on_background_noise_min_texts', 5)
+        self.hard_break_even_on_background_noise_min_similarity = config.get('hard_break_even_on_background_noise_min_similarity', 0.99)
+        self.hard_break_even_on_background_noise_min_chars = config.get('hard_break_even_on_background_noise_min_chars', 15)
         print("Constructing STT completed")
+
+
+    def register_commands(self, register_func : Callable[[str, Callable], None]):
+        print("STT processor registering commands")
+        register_func('start_listening', self._start_listening)
+        register_func('stop_listening', self._stop_listening)
 
 
     def run(self):
@@ -72,11 +129,6 @@ class STTProcessor(threading.Thread):
         try:
             self.running = True
             print("STT processor starting...")
-
-            # Create a new event loop for this thread
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            loop = asyncio.get_event_loop()
-            self.loop = loop  # Store the loop for use with run_coroutine_threadsafe
 
             # Print initialization info
             print(f"{bcolors.OKGREEN}Initializing STT processor with parameters:{bcolors.ENDC}")
@@ -91,7 +143,7 @@ class STTProcessor(threading.Thread):
 
             # Configure STT recorder
             self.recorder = AudioToTextRecorder(
-                input_device_index=2,
+                use_microphone=False,  # Set to False for WebSocket input
                 level=logging.INFO,
                 spinner=False,
                 compute_type=compute_type,
@@ -117,14 +169,15 @@ class STTProcessor(threading.Thread):
                 on_recording_stop=self._on_recording_stop,
                 on_vad_detect_start=self._on_vad_detect_start,
                 on_vad_detect_stop=self._on_vad_detect_stop,
-                on_transcription_start=self._on_transcription_start,
+                on_transcription_start=_on_transcription_start,
                 on_turn_detection_start=self._on_turn_detection_start,
                 on_turn_detection_stop=self._on_turn_detection_stop,
             )
 
             print(f"{bcolors.OKGREEN}{bcolors.BOLD}STT processor initialized{bcolors.ENDC}")
             # Run the coroutine in this thread's event loop
-            loop.run_until_complete(self.process_input_queue())
+            while self.running:
+                self.recorder.text(self._process_text)
 
         except Exception as e:
             print(f"Error in STT processor: {str(e)}")
@@ -132,48 +185,18 @@ class STTProcessor(threading.Thread):
             self.stop()
             print("STT processor stopped")
 
-    async def process_input_queue(self):
-        """Process input queue in the event loop"""
-        while self.running:
-            try:
-                # Check if there are messages to process
-                if not self.input_queue.empty():
-                    message = await self.input_queue.get()
-
-                    if message['type'] == 'audio_data':
-                        # Process audio data from WebSocket
-                        audio_data = message['data']
-                        self._process_audio_data(audio_data)
-
-                    elif message['type'] == 'command':
-                        command = message['command']
-                        if command == 'start_listening':
-                            print("Starting STT listening")
-                            self._start_listening()
-                        elif command == 'stop_listening':
-                            print("Stopping STT listening")
-                            self._stop_listening()
-                        elif command == 'shutdown':
-                            print("Shutting down STT processor")
-                            self.running = False
-
-                await asyncio.sleep(0.01)  # Small sleep to prevent CPU hogging
-
-            except queue.Empty:
-                pass
-            except Exception as e:
-                print(f"Error processing audio data: {str(e)}")
-
     def _process_text(self, full_sentence):
-        prev_text = ""
-        full_sentence = self._preprocess_text(full_sentence)
+        self.prev_text = ""
+        full_sentence = _preprocess_text(full_sentence)
         print(f"Sentence: {full_sentence}")
         self.output_queue.put({
             'type': 'fullSentence',
+            'as_command': True,
+            'command': 'translate',
             'text': full_sentence
         })
 
-    def _process_audio_data(self, audio_data):
+    def process_audio_data(self, audio_data):
         """Process audio data received from WebSocket"""
         try:
             # Check if audio data contains metadata
@@ -196,7 +219,7 @@ class STTProcessor(threading.Thread):
                         # Process the audio with the recorder
                         if self.recorder:
                             # Resample if needed and feed to recorder
-                            processed_audio = self._decode_and_resample(
+                            processed_audio = _decode_and_resample(
                                 audio_bytes,
                                 sample_rate,
                                 self.recorder.sample_rate
@@ -214,27 +237,6 @@ class STTProcessor(threading.Thread):
         except Exception as e:
             print(f"Error processing audio data: {str(e)}")
 
-    def _decode_and_resample(self, audio_data, original_sample_rate, target_sample_rate):
-        """Decode and resample audio data if necessary"""
-        from scipy.signal import resample
-
-        # If sample rates match, no resampling needed
-        if original_sample_rate == target_sample_rate:
-            return audio_data
-
-        # Convert bytes to numpy array
-        audio_np = np.frombuffer(audio_data, dtype=np.int16)
-
-        # Calculate the number of samples after resampling
-        num_original_samples = len(audio_np)
-        num_target_samples = int(num_original_samples * target_sample_rate / original_sample_rate)
-
-        # Resample the audio
-        resampled_audio = resample(audio_np, num_target_samples)
-
-        # Convert back to bytes
-        return resampled_audio.astype(np.int16).tobytes()
-
     def _start_listening(self):
         """Start listening for audio"""
         if self.recorder:
@@ -249,33 +251,9 @@ class STTProcessor(threading.Thread):
             self.recorder.stop()
             self.recorder.clear_audio_queue()
 
-    def _preprocess_text(self, text):
-        """Preprocess the transcribed text"""
-        # Remove leading whitespaces
-        text = text.lstrip()
-
-        # Remove starting ellipses if present
-        if text.startswith("..."):
-            text = text[3:]
-
-        if text.endswith("...'."):
-            text = text[:-1]
-
-        if text.endswith("...'"):
-            text = text[:-1]
-
-        # Remove any leading whitespaces again after ellipses removal
-        text = text.lstrip()
-
-        # Uppercase the first letter
-        if text:
-            text = text[0].upper() + text[1:]
-
-        return text
-
     def _on_realtime_transcription(self, text):
         """Handle real-time transcription updates"""
-        text = self._preprocess_text(text)
+        text = _preprocess_text(text)
 
         if self.silence_timing:
             def ends_with_ellipsis(t):
@@ -338,27 +316,6 @@ class STTProcessor(threading.Thread):
         else:
             print(f"\r[{timestamp}] {bcolors.OKCYAN}{text}{bcolors.ENDC}", flush=True, end='')
 
-    def _on_transcription(self, text):
-        """Handle final transcription"""
-        self.prev_text = ""
-        text = self._preprocess_text(text)
-
-        # Put the message in the output queue
-        self.output_queue.put({
-            'type': 'transcription',
-            'text': text,
-            'is_final': True
-        })
-
-        # Log the message
-        timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
-        if self.config.get('extended_logging', False):
-            print(
-                f"  [{timestamp}] Full text: {bcolors.BOLD}Sentence:{bcolors.ENDC} {bcolors.OKGREEN}{text}{bcolors.ENDC}\n",
-                flush=True, end="")
-        else:
-            print(f"\r[{timestamp}] {bcolors.BOLD}Sentence:{bcolors.ENDC} {bcolors.OKGREEN}{text}{bcolors.ENDC}\n")
-
     def _on_recording_start(self):
         """Handle recording start event"""
         self.output_queue.put({
@@ -382,15 +339,6 @@ class STTProcessor(threading.Thread):
         self.output_queue.put({
             'type': 'vad_detect_stop'
         })
-
-    def _on_transcription_start(self, audio_bytes):
-        """Handle transcription start event"""
-        bytes_b64 = base64.b64encode(audio_bytes.tobytes()).decode('utf-8')
-        message = json.dumps({
-            'type': 'transcription_start',
-            'audio_bytes_base64': bytes_b64
-        })
-        #asyncio.run_coroutine_threadsafe(self.websocket.send(message), self.loop)
 
     def _on_turn_detection_start(self):
         print("&&& stt_server on_turn_detection_start")

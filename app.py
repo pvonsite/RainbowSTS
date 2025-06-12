@@ -5,6 +5,7 @@ import uuid
 
 from flask import Flask, render_template, request, jsonify
 
+from ws_manager import WebsocketManager
 from ws_session import WebsocketSession
 
 #logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -53,6 +54,7 @@ def get_models():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+
 @app.route('/start_session', methods=['POST'])
 def start_session():
     """Start a new STT and translation session"""
@@ -64,7 +66,6 @@ def start_session():
         # Extract configuration parameters
         # TODO: fill this later
         stt_config = {
-            'input_device_id': config.get('input_device_index'),
             'model': config.get('stt_model', 'base'),
             'language': config.get('source_language', 'en'),
         }
@@ -87,11 +88,10 @@ def start_session():
             'tts': tts_config,
         }
         print(f"Starting session with config: {session_config}")
-        ws_session = WebsocketSession(
+        ws_session = WebsocketManager(
             stt_config=stt_config,
             translation_config=translation_config,
             tts_config=tts_config,
-            websocket_port=port,
         )
         print(f"Starting WebSocket session on port {port}")
         ws_session.start()

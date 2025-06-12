@@ -293,3 +293,4 @@ class WebsocketSession:
         shutdown_thread = threading.Thread(target=self.stop)
         shutdown_thread.daemon = True
         shutdown_thread.start()
+
