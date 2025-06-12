@@ -27,6 +27,7 @@ class AudioDeviceManager {
 
             // Now get the list of devices
             const devices = await navigator.mediaDevices.enumerateDevices();
+            console.log(devices)
             const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
             this.devices = audioInputDevices;
             console.log('Audio devices:', audioInputDevices);

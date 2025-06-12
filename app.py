@@ -7,8 +7,8 @@ from flask import Flask, render_template, request, jsonify
 
 from ws_session import WebsocketSession
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logging.getLogger().setLevel(logging.DEBUG)
+#logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+#logging.getLogger().setLevel(logging.INFO)
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())

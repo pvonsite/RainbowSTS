@@ -7,7 +7,7 @@ import asyncio
 import time
 
 import websockets
-from component import stt
+from component import stt, translation
 
 
 class WebsocketSession:
@@ -32,6 +32,7 @@ class WebsocketSession:
         self.translator_to_tts_queue = queue.Queue()  # Translated text
         self.tts_output_queue = queue.Queue()  # Audio data out
         self.websocket_output_queue = queue.Queue()  # Messages to send to client
+        self.shared_queue = queue.Queue()  # Shared queue for inter-component communication
 
         # Start the queue monitor in a separate thread
         self.queue_monitor_thread = threading.Thread(
@@ -44,15 +45,15 @@ class WebsocketSession:
         self.stt_processor = stt.STTProcessor(
             stt_config,
             self.stt_input_queue,
-            self.stt_to_translator_queue
+            self.shared_queue
         )
 
-        # self.translator = TextTranslator(
-        #     config.get('translation_config', {}),
-        #     self.stt_to_translator_queue,
-        #     self.translator_to_tts_queue
-        # )
-        self.translator = None
+        print("Create Translation processor")
+        self.translator = translation.TranslationProcessor(
+            translation_config,
+            self.stt_to_translator_queue,
+            self.translator_to_tts_queue
+        )
 
         # self.tts_processor = TTSProcessor(
         #     config.get('tts_config', {}),
@@ -130,10 +131,21 @@ class WebsocketSession:
         """Send messages from the output queue to the client"""
         while True:
             try:
+                while not self.shared_queue.empty():
+                    message = self.shared_queue.get(block=False)
+                    if message['type'] == 'transcription':
+                        print(f"Sending transcription to client: {message}")
+                        # request translation for the transcription
+                        self.stt_to_translator_queue.put(message)
+                        # Currently, we're not sending audio back to client
+                        # But you could implement this if needed
+                        pass
+
                 # Check if there are messages to process from STT or translation
                 while not self.stt_to_translator_queue.empty():
                     message = self.stt_to_translator_queue.get(block=False)
                     if message['type'] == 'transcription':
+                        print(f"Sending transcription to client: {message}")
                         # Send transcription to client
                         await websocket.send(json.dumps({
                             'type': 'transcription',
@@ -206,8 +218,7 @@ class WebsocketSession:
 
             # Start the processors
             self.stt_processor.start()
-
-            # self.translator.start()
+            self.translator.start()
             # self.tts_processor.start()
 
             print("Starting queue monitor thread")

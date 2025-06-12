@@ -8,6 +8,9 @@ import torch
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
 
 
+logger = logging.getLogger("TranslationProcessor")
+logger.setLevel(logging.DEBUG)
+
 class TranslationProcessor(threading.Thread):
     """Translation processor that runs in its own thread"""
 
@@ -26,7 +29,6 @@ class TranslationProcessor(threading.Thread):
         self.output_queue = output_queue
         self.daemon = True
         self.running = False
-        self.logger = logging.getLogger("TranslationProcessor")
 
         # Translation buffer
         self.translation_buffer = []  # Buffer to store sentences for batch translation
@@ -47,14 +49,12 @@ class TranslationProcessor(threading.Thread):
         self.model = None
         self.tokenizer = None
 
-        self.logger.info(f"Initialized TranslationProcessor with device: {self.device}")
         print(f"Initialized TranslationProcessor with device: {self.device}")
 
     def run(self):
         """Main thread execution"""
         try:
             self.running = True
-            self.logger.info("Translation processor starting...")
             print("Translation processor starting...")
 
             # Load model and tokenizer
@@ -76,7 +76,7 @@ class TranslationProcessor(threading.Thread):
                             # Add the sentence to the buffer with a timestamp
                             self.translation_buffer.append(message['text'])
                             self.sentence_timestamps.append(time.time())
-                            self.logger.debug(f"Added sentence to translation buffer: {message['text']}")
+                            print(f"Added sentence to translation buffer: {message['text']}")
 
                         elif message['type'] == 'command':
                             command = message['command']
@@ -110,13 +110,13 @@ class TranslationProcessor(threading.Thread):
                 except queue.Empty:
                     pass
                 except Exception as e:
-                    self.logger.error(f"Error in translation processing: {str(e)}", exc_info=True)
+                    logger.error(f"Error in translation processing: {str(e)}", exc_info=True)
 
         except Exception as e:
-            self.logger.error(f"Error in translation processor: {str(e)}", exc_info=True)
+            logger.error(f"Error in translation processor: {str(e)}", exc_info=True)
         finally:
             self.stop()
-            self.logger.info("Translation processor stopped")
+            print("Translation processor stopped")
 
     def _translate_buffer(self):
         """Translate all sentences in the buffer"""
@@ -124,7 +124,7 @@ class TranslationProcessor(threading.Thread):
             return
 
         try:
-            self.logger.info(f"Translating batch of {len(self.translation_buffer)} sentences")
+            print(f"Translating batch of {len(self.translation_buffer)} sentences")
 
             results = []
             # Process each sentence
@@ -149,7 +149,7 @@ class TranslationProcessor(threading.Thread):
                 }
                 results.append(result)
 
-                self.logger.debug(f"Translated: {sentence} → {translated_text}")
+                print(f"Translated: {sentence} → {translated_text}")
 
             # Send all results to output queue
             for result in results:
@@ -166,14 +166,14 @@ class TranslationProcessor(threading.Thread):
             self.sentence_timestamps = []
 
         except Exception as e:
-            self.logger.error(f"Error translating buffer: {str(e)}", exc_info=True)
+            logger.error(f"Error translating buffer: {str(e)}", exc_info=True)
 
     def stop(self):
         """Stop the translation processor"""
         if not self.running:
             return
 
-        self.logger.info("Stopping translation processor")
+        print("Stopping translation processor")
         self.running = False
 
         # Translate any remaining sentences

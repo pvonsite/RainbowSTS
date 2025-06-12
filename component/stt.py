@@ -91,7 +91,9 @@ class STTProcessor(threading.Thread):
 
             # Configure STT recorder
             self.recorder = AudioToTextRecorder(
-                level=logging.DEBUG,
+                input_device_index=2,
+                level=logging.INFO,
+                spinner=False,
                 compute_type=compute_type,
                 device=device.type,
                 model=self.config.get('model', 'base'),
@@ -179,7 +181,7 @@ class STTProcessor(threading.Thread):
                 # Check for metadata header
                 metadata_length = int.from_bytes(audio_data[:4], byteorder='little')
 
-                if metadata_length > 0 and metadata_length < len(audio_data) - 4:
+                if 0 < metadata_length < len(audio_data) - 4:
                     # Extract metadata and audio
                     metadata_bytes = audio_data[4:4 + metadata_length]
                     audio_bytes = audio_data[4 + metadata_length:]
