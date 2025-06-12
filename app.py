@@ -79,9 +79,6 @@ def start_session():
         # TODO: fill this later
         tts_config = {}
 
-        # Determine which WebSocket port to use
-        port = config.get('websocket_port', 8765)
-
         session_config = {
             'stt': stt_config,
             'translation': translation_config,
@@ -93,9 +90,8 @@ def start_session():
             translation_config=translation_config,
             tts_config=tts_config,
         )
-        print(f"Starting WebSocket session on port {port}")
-        ws_session.start()
-        print("WebSocket session creation is success")
+        port = ws_session.start()
+        print(f"Started WebSocket session on port {port}")
 
         # Save session information
         active_sessions[session_id] = {

@@ -4,6 +4,8 @@ import queue
 import logging
 import time
 from collections import deque
+from typing import Callable
+
 import torch
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
 
@@ -51,6 +53,18 @@ class TranslationProcessor(threading.Thread):
 
         print(f"Initialized TranslationProcessor with device: {self.device}")
 
+
+    def register_commands(self, register_func : Callable[[str, Callable], None]):
+        """
+        Register command handlers for translation commands
+
+        Args:
+            register_func: Function to register commands
+        """
+        register_func('translate', self._translate_buffer)
+        register_func('shutdown', self.stop)
+
+
     def run(self):
         """Main thread execution"""
         try:
@@ -80,9 +94,10 @@ class TranslationProcessor(threading.Thread):
 
                         elif message['type'] == 'command':
                             command = message['command']
-                            if command == 'translate_now':
+                            if command == 'translate':
                                 # Force translation of current buffer
-                                self._translate_buffer()
+                                self.translation_buffer.append(message['text'])
+                                self.sentence_timestamps.append(time.time())
                             elif command == 'shutdown':
                                 # Translate any remaining text and exit
                                 if self.translation_buffer:
