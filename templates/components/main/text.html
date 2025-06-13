@@ -9,11 +9,9 @@
     font-size: 2.5rem;
     font-weight: 600;
     color: transparent;
-    text-align: right;
-    direction: rtl;
     overflow: hidden;
     background: rgba(255, 255, 255, 1);
-    width: 100%;
+    width: 80%;
     background: linear-gradient(
       90deg,
       rgba(255, 255, 255, 0) 0%,
@@ -54,10 +52,7 @@
 
 <div id="text" class="flex flex-column align-center">
   <div id="original-text" class="text" data-kind="original">
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-    tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-    quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-    consequat.
+    Original text will be lived here
   </div>
 
   <div class="fullsentence flex glassy">
@@ -81,3 +76,25 @@
     </div>
   </div>
 </div>
+
+<script>
+  (() => {
+    const LIVE_PLACEHOLDER = "Original text will be lived here.";
+    const ORIGINAL_PLACEHOLDER =
+      "Detected sentences from the original conversation will appear here.";
+    const TRANSLATED_PLACEHOLDER = "Translated sentences will appear here.";
+
+    const liveText = document.getElementById("original-text");
+    const originalConversation = document.getElementById(
+      "original-conversation",
+    );
+    const translatedConversation = document.getElementById(
+      "translated-conversation",
+    );
+
+    state.addEventListener(
+      "liveTextChanged",
+      () => (liveText.textContent = state.liveText),
+    );
+  })();
+</script>
