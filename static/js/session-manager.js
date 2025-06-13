@@ -74,7 +74,7 @@ class SessionManager {
 
       this.websocketHandler.addEventListener("error", (error) => {
         console.error("WebSocket error:", error);
-        this.statusElement.textContent = "Status: WebSocket error";
+        notificator.error("WebSocket", `Error: ${error.message}`);
       });
 
       this.websocketHandler.addEventListener(
