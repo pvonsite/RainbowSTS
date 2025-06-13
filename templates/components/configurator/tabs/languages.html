@@ -51,15 +51,15 @@
       state.setSourceLanguage(event.target.value),
     );
     destLanguageSelector.addEventListener("change", (event) =>
-      state.setDestLanguage(event.target.value),
+      state.setDestinationLanguage(event.target.value),
     );
 
     state.addEventListener("sourceLanguageChanged", () => {
-      sourceLanguageSelector.value = state.sourceLanguage;
+      sourceLanguageSelector.value = state.srcLanguage;
     });
 
     state.addEventListener("destLanguageChanged", () => {
-      destLanguageSelector.value = state.destLanguage;
+      destLanguageSelector.value = state.dstLanguage;
     });
   })();
 </script>
