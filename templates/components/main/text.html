@@ -42,6 +42,14 @@
     padding-left: 0.5rem;
     padding-right: 0.5rem;
   }
+
+  #text .convo span[role="placeholder"] {
+    display: block;
+    color: rgba(0, 0, 0, 0.5);
+    font-weight: 600;
+    font-size: 1.5rem;
+    text-align: center;
+  }
 </style>
 
 <div id="text" class="flex flex-column align-center">
@@ -56,13 +64,20 @@
     <div class="flex-1 flex flex-column">
       <h2 class="text-center">Original Conversation</h2>
 
-      <div id="original-conversation" class="flex-1 convo">a</div>
+      <div id="original-conversation" class="flex-1 convo">
+        <span role="placeholder">
+          Detected sentences from the original conversation will appear
+          here.</span
+        >
+      </div>
     </div>
 
     <div class="flex-1 flex flex-column">
       <h2 class="text-center">Translated Conversation</h2>
 
-      <div id="translated-conversation" class="flex-1 convo">b</div>
+      <div id="translated-conversation" class="flex-1 convo">
+        <span role="placeholder">Translated sentences will appear here.</span>
+      </div>
     </div>
   </div>
 </div>
