@@ -37,6 +37,25 @@
       cleanupTimeout = 0;
 
       static ERROR = ["#de3e44", "#fff"];
+      static SUCCESS = ["#4caf50", "#fff"];
+      static INFO = ["#2196f3", "#fff"];
+      static WARNING = ["#ff9800", "#fff"];
+
+      success(title, message) {
+        this.alert(title, message, Notificator.SUCCESS);
+      }
+
+      error(title, message) {
+        this.alert(title, message, Notificator.ERROR);
+      }
+
+      info(title, message) {
+        this.alert(title, message, Notificator.INFO);
+      }
+
+      warning(title, message) {
+        this.alert(title, message, Notificator.WARNING);
+      }
 
       alert(title, message, colors) {
         if (this.fadingTimeout) {
@@ -83,6 +102,7 @@
       }
     }
 
+    window.Notificator = Notificator;
     window.notificator = new Notificator();
   })();
 </script>
