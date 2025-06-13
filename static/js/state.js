@@ -17,10 +17,13 @@ class State extends EventTarget {
   selectedAudioPlaybackDevice = "";
   srcLanguage = "";
   dstLanguage = "";
+  session = null;
 
   async play() {
-    if (this.state !== State.STATES.WAITING) {
-      return;
+    if (this.state !== State.STATES.WAITING) return;
+
+    if (this.session) {
+      this.session.play();
     }
 
     this.state = State.STATES.CONNECTING;
@@ -28,12 +31,18 @@ class State extends EventTarget {
 
     this.dispatchEvent(new Event("titleChanged"));
     this.dispatchEvent(new Event("stateChanged"));
+
+    console.log(await sessionManager.startSession());
   }
 
   async pause() {
-    if (this.state !== State.STATES.PLAYING) {
-      return;
-    }
+    if (this.state !== State.STATES.PLAYING) return;
+
+    this.state = State.STATES.PAUSED;
+    this.title = State.TITLES[this.state];
+
+    this.dispatchEvent(new Event("titleChanged"));
+    this.dispatchEvent(new Event("stateChanged"));
   }
 
   async stop() {

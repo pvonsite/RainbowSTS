@@ -11,11 +11,9 @@ class SessionManager {
 
   async startSession() {
     try {
-      const deviceId = this.audioDeviceManager.getSelectedDeviceId();
+      const deviceId = state.selectedAudioCaptureDevice;
 
-      if (!deviceId) {
-        return;
-      }
+      if (!deviceId) return;
 
       // Get configuration
       const config = {
@@ -43,12 +41,17 @@ class SessionManager {
         this.websocketHandler.addEventListener("connection", (data) => {
           if (data && data.status === "connected") {
             console.log("WebSocket connected:", data);
-            this.statusElement.textContent = "Status: WebSocket connected";
-            this.startListeningBtn.disabled = false;
+            notificator.alert(
+              "WebSocket",
+              "WebSocket connection established successfully.",
+            );
           } else {
             console.error("WebSocket connection failed:", data);
-            this.statusElement.textContent =
-              "Status: WebSocket connection failed";
+            notificator.alert(
+              "WebSocket",
+              "WebSocket connection failed.",
+              Notificator.ERROR,
+            );
           }
         });
         this.websocketHandler.addEventListener("error", (error) => {
@@ -66,7 +69,7 @@ class SessionManager {
       }
     } catch (error) {
       console.error("Error starting session:", error);
-      this.statusElement.textContent = "Status: Error starting session";
+      notificator.alert("Session", "Error starting session", Notificator.ERROR);
     }
   }
 

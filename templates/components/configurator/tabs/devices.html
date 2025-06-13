@@ -73,7 +73,7 @@
     });
 
     state.addEventListener("audioCaptureDeviceChanged", () => {
-      audioCaptureSelector.value = state.audioCaptureDevice;
+      audioCaptureSelector.value = state.selectedAudioCaptureDevice;
     });
 
     const audioPlaybackSelector = document.getElementById("audio-playback");
@@ -94,7 +94,7 @@
     });
 
     state.addEventListener("audioPlaybackDeviceChanged", () => {
-      audioPlaybackSelector.value = state.audioPlaybackDevice;
+      audioPlaybackSelector.value = state.selectedAudioPlaybackDevice;
     });
   })();
 </script>
