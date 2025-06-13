@@ -123,7 +123,7 @@
       configurator.setAttribute("open", "true");
 
       await audioDeviceManager.loadDevices();
-      await sttModelManager.initialize();
+      await modelManager.initialize();
 
       audioCaptureSelector.dispatchEvent(new Event("reload"));
       audioPlaybackSelector.dispatchEvent(new Event("reload"));

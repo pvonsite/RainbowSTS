@@ -49,13 +49,37 @@
     sttModelSelector.addEventListener("reload", () =>
       reloadSelections(
         sttModelSelector,
-        sttModelManager.models,
-        sttModelManager.selectedModel,
+        modelManager.models.speechtotext,
+        state.selectedS2tModel,
       ),
     );
 
     sttModelSelector.addEventListener("change", (event) =>
       state.setSpeechToTextModel(event.target.value),
+    );
+
+    translationModelSelector.addEventListener("reload", () =>
+      reloadSelections(
+        translationModelSelector,
+        modelManager.models.translation,
+        state.selectedTransModel,
+      ),
+    );
+
+    translationModelSelector.addEventListener("change", (event) =>
+      state.setTranslationModel(event.target.value),
+    );
+
+    ttsModelSelector.addEventListener("reload", () =>
+      reloadSelections(
+        ttsModelSelector,
+        modelManager.models.texttospeech,
+        state.selectedT2sModel,
+      ),
+    );
+
+    ttsModelSelector.addEventListener("change", (event) =>
+      state.setTextToSpeechModel(event.target.value),
     );
 
     state.addEventListener(

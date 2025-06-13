@@ -1,9 +1,9 @@
 /**
- * Class that manages STT models fetching and selection
+ * Class that manages models fetching
  */
-class STTModelManager {
+class ModelManager {
   selectedModel = "";
-  models = [];
+  models = {};
   isLoading = false;
   initialized = false;
 
@@ -36,12 +36,6 @@ class STTModelManager {
 
       const { models } = response;
 
-      console.log(
-        "STT models loaded successfully:",
-        models.length,
-        "models found",
-      );
-
       return models;
     } catch (error) {
       console.error("Error fetching STT models:", error);
@@ -50,9 +44,4 @@ class STTModelManager {
       this.isLoading = false;
     }
   }
-
-  setModel(model) {
-    this.selectedModel = model;
-  }
 }
-

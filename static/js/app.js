@@ -1,7 +1,7 @@
 (() => {
   // Initialize components
   window.audioDeviceManager = new AudioDeviceManager();
-  window.sttModelManager = new STTModelManager();
+  window.modelManager = new ModelManager();
   window.websocketHandler = new WebSocketHandler();
   window.audioRecorder = new AudioRecorder(websocketHandler);
   window.state = new State();
@@ -15,7 +15,7 @@
   console.log("Load audio device list");
   // Load audio devices on startup
   audioDeviceManager.loadDevices();
-  sttModelManager.loadModels();
+  modelManager.loadModels();
 
   // Set up any additional event listeners or global state
 
