@@ -1,0 +1,88 @@
+<style>
+  #notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition:
+      opacity 0.2s ease-in-out,
+      display 0.2s ease-in-out;
+    display: none;
+  }
+
+  #notification > h2 {
+    margin: 0.25rem 0;
+  }
+
+  #notification > p {
+    margin: 0;
+    margin-top: 0.25rem;
+  }
+</style>
+
+<div id="notification">
+  <h2>title</h2>
+  <p>message</p>
+</div>
+
+<script>
+  (() => {
+    class Notificator {
+      notification = document.getElementById("notification");
+      fadingTimeout = 0;
+      cleanupTimeout = 0;
+
+      static ERROR = ["#de3e44", "#fff"];
+
+      alert(title, message, colors) {
+        if (this.fadingTimeout) {
+          clearTimeout(this.fadingTimeout);
+          this.fadingTimeout = 0;
+        }
+        if (this.clearingTimeout) {
+          clearTimeout(this.clearingTimeout);
+          this.clearingTimeout = 0;
+        }
+
+        let [bgColor, color] = colors || [];
+
+        if (bgColor) {
+          const [r, g, b] = hexToRgb(bgColor);
+          bgColor = `rgba(${r}, ${g}, ${b}, 0.4)`;
+        } else bgColor = "rgba(255, 255, 255, 0.4)";
+
+        this.notification.style.backgroundColor = bgColor;
+
+        if (color) {
+          const [r, g, b] = hexToRgb(color);
+          color = `rgb(${r}, ${g}, ${b})`;
+        } else color = "black";
+
+        this.notification.style.color = color;
+
+        this.notification.children[0].textContent = title;
+        this.notification.children[1].textContent = message;
+
+        this.notification.style.display = "block";
+        this.notification.style.opacity = "1";
+
+        this.clearingTimeout = setTimeout(() => {
+          this.clear();
+        }, 3000);
+      }
+
+      clear() {
+        this.notification.style.opacity = "0";
+        this.fadingTimeout = setTimeout(() => {
+          this.notification.style.display = "none";
+        }, 200);
+      }
+    }
+
+    window.notificator = new Notificator();
+  })();
+</script>
