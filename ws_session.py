@@ -7,7 +7,7 @@ import asyncio
 import time
 
 import websockets
-from component import stt, translation
+from component import stt, translation, tts
 
 
 class WebsocketSession:
@@ -33,14 +33,8 @@ class WebsocketSession:
         self.translator_input_queue = asyncio.Queue()  # Transcribed text, request for translation
         self.translator_output_queue = asyncio.Queue()  # Translated text, translation events
 
-        self.tts_output_queue = queue.Queue()  # Audio data out
-        self.websocket_output_queue = queue.Queue()  # Messages to send to client
-
-        # Start the queue monitor in a separate thread
-        self.queue_monitor_thread = threading.Thread(
-            target=self._monitor_component_queues,
-            daemon=True
-        )
+        self.tts_input_queue = asyncio.Queue()  # translated text, request for TTS synthesis
+        self.tts_output_queue = asyncio.Queue()  # TTS audio data
 
         print("Create STT processor")
         # Create component instances
@@ -57,12 +51,11 @@ class WebsocketSession:
             self.translator_output_queue
         )
 
-        # self.tts_processor = TTSProcessor(
-        #     config.get('tts_config', {}),
-        #     self.translator_to_tts_queue,
-        #     self.tts_output_queue
-        # )
-        self.tts_processor = None
+        self.tts_processor = tts.TTSProcessor(
+            tts_config,
+            self.tts_input_queue,
+            self.tts_output_queue
+        )
 
         # WebSocket server
         self.websocket_server = None
@@ -150,6 +143,12 @@ class WebsocketSession:
                     message = await self.translator_output_queue.get()
                     print(f"Sending translation to client: {message}")
                     await websocket.send(json.dumps(message))
+                    if 'command' in message and message['command'] == 'synthesize':
+                        # Forward the translation to the TTS processor
+                        asyncio.run_coroutine_threadsafe(
+                            self.tts_input_queue.put(message),
+                            self.tts_processor.loop
+                        )
                     self.translator_output_queue.task_done()
 
                 # Short delay to prevent CPU hogging
@@ -171,24 +170,6 @@ class WebsocketSession:
             self.websocket_server = server
             await asyncio.Future()  # Run forever
 
-    def _monitor_component_queues(self):
-        """Monitor and forward messages between component queues"""
-        while self.running:
-            try:
-                # Check TTS output queue and forward to websocket
-                if not self.tts_output_queue.empty():
-                    message = self.tts_output_queue.get(block=False)
-                    if message['type'] == 'tts_audio':
-                        # Currently, we're not sending audio back to client
-                        # But you could implement this if needed
-                        pass
-
-                time.sleep(0.01)  # Small sleep to prevent CPU hogging
-            except queue.Empty:
-                pass
-            except Exception as e:
-                self.logger.error(f"Error in queue monitor: {str(e)}")
-
     def start(self):
         """Start all components and the WebSocket server"""
         try:
@@ -202,10 +183,7 @@ class WebsocketSession:
             # Start the processors
             self.stt_processor.start()
             self.translator.start()
-            # self.tts_processor.start()
-
-            print("Starting queue monitor thread")
-            self.queue_monitor_thread.start()
+            self.tts_processor.start()
 
             # Start the WebSocket server in a separate thread
             print("Starting WebSocket server thread")
@@ -261,10 +239,6 @@ class WebsocketSession:
                 self.websocket_server.close()
             except:
                 pass
-
-        print("Stopping queue monitor thread")
-        if self.queue_monitor_thread.is_alive():
-            self.queue_monitor_thread.join(timeout=1)
 
         print("WebSocket session stopped")
 

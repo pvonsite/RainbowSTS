@@ -76,7 +76,10 @@ def start_session():
         }
 
         # TODO: fill this later
-        tts_config = {}
+        tts_config = {
+            'tts_engine': 'edge',
+            'language': config.get('target_language', 'vi'),
+        }
 
         # Determine which WebSocket port to use
         port = config.get('websocket_port', 8765)

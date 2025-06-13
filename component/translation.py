@@ -152,7 +152,7 @@ class TranslationProcessor(threading.Thread):
 
     def _translation_worker(self):
         """Worker thread that processes the translation queue"""
-        while self.running or not self.translation_queue.empty():
+        while self.running:
             try:
                 # Get the next batch from the queue
                 batch, timestamps, prev_count = self.translation_queue.get(timeout=1.0)
@@ -207,6 +207,7 @@ class TranslationProcessor(threading.Thread):
                         asyncio.run_coroutine_threadsafe(
                             self.output_queue.put({
                                 'type': 'translation',
+                                'command': 'synthesize',
                                 'original': result['original'],
                                 'translated': result['translated'],
                                 'is_final': True,
