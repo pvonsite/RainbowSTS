@@ -19,6 +19,15 @@ class State extends EventTarget {
   dstLanguage = "";
   session = null;
 
+  constructor() {
+    super();
+
+    this.addEventListener("stateChanged", () => {
+      this.title = State.TITLES[this.state];
+      this.dispatchEvent(new Event("titleChanged"));
+    });
+  }
+
   async play() {
     if (this.state !== State.STATES.WAITING) return;
 
@@ -26,23 +35,22 @@ class State extends EventTarget {
       this.session.play();
     }
 
-    this.state = State.STATES.CONNECTING;
-    this.title = State.TITLES[this.state];
+    this.setState(State.STATES.CONNECTING);
 
-    this.dispatchEvent(new Event("titleChanged"));
-    this.dispatchEvent(new Event("stateChanged"));
+    const success = await sessionManager.startSession();
 
-    console.log(await sessionManager.startSession());
+    if (!success) {
+      this.setState(State.STATES.WAITING);
+      return;
+    }
+
+    this.setState(State.STATES.PLAYING);
   }
 
   async pause() {
     if (this.state !== State.STATES.PLAYING) return;
 
-    this.state = State.STATES.PAUSED;
-    this.title = State.TITLES[this.state];
-
-    this.dispatchEvent(new Event("titleChanged"));
-    this.dispatchEvent(new Event("stateChanged"));
+    this.setState(State.STATES.PAUSED);
   }
 
   async stop() {
@@ -89,6 +97,11 @@ class State extends EventTarget {
   setTranslationModel(model) {
     this.selectedTransModel = model;
     this.dispatchEvent(new Event("translationModelChanged"));
+  }
+
+  setState(state) {
+    this.state = state;
+    this.dispatchEvent(new Event("stateChanged"));
   }
 
   get isWaiting() {
