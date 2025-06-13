@@ -26,33 +26,16 @@ def index():
     """Serve the main web interface"""
     return render_template('index.html')
 
-
-@app.route('/models/stt')
+@app.route('/models')
 def get_models():
-    """Return available STT models"""
     try:
-        return jsonify({'status': 'success', 'models': utils.STT_MODELS})
+        return jsonify({'status': 'success', 'models': {
+            'speechtotext': utils.STT_MODELS,
+            'translation': [model['name'] for model in utils.TRANSLATE_MODELS if model['supported']],
+            'texttospeech': utils.TTS_SUPPORTED_ENGINES,
+            }})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
-
-@app.route('/models/trans')
-def get_translation_models():
-    """Return available translation models"""
-    try:
-        return jsonify({'status': 'success', 'models': utils.TRANSLATE_MODELS})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-
-@app.route('/models/tts_engine')
-def get_tts_engines():
-    """Return available TTS engines"""
-    try:
-        return jsonify({'status': 'success', 'engines': utils.TTS_SUPPORTED_ENGINES})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
 
 @app.route('/models/tts_engine/<engine_name>')
 def get_tts_engine_supported_voices(engine_name):
@@ -148,4 +131,4 @@ def stop_session(session_id):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=3000, debug=True)
