@@ -1,13 +1,11 @@
 # component/translation.py
 import asyncio
-import threading
-import queue
 import logging
+import threading
 import time
-from collections import deque
+
 import torch
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
-
 
 logger = logging.getLogger("TranslationProcessor")
 logger.setLevel(logging.DEBUG)
@@ -47,9 +45,13 @@ class TranslationProcessor(threading.Thread):
             "cuda" if torch.cuda.is_available() and not config.get('force_cpu', False) else "cpu")
 
         # Initialize model and tokenizer as None, will load in run()
-        self.model = None
-        self.tokenizer = None
-        self.loop = None
+        # Load model and tokenizer
+        start_time = time.time()
+        print(f"Loading translation model {self.model_name}...")
+        self.model = M2M100ForConditionalGeneration.from_pretrained(self.model_name).to(self.device)
+        self.tokenizer = M2M100Tokenizer.from_pretrained(self.model_name)
+        self.tokenizer.src_lang = self.source_language
+        print(f"Model loaded in {time.time() - start_time:.2f} seconds")
 
         print(f"Initialized TranslationProcessor with device: {self.device}")
 
@@ -59,68 +61,45 @@ class TranslationProcessor(threading.Thread):
             self.running = True
             print("Translation processor starting...")
             self.loop = asyncio.new_event_loop()
-
-            # Load model and tokenizer
-            start_time = time.time()
-            print(f"Loading translation model {self.model_name}...")
-            self.model = M2M100ForConditionalGeneration.from_pretrained(self.model_name).to(self.device)
-            self.tokenizer = M2M100Tokenizer.from_pretrained(self.model_name)
-            self.tokenizer.src_lang = self.source_language
-            print(f"Model loaded in {time.time() - start_time:.2f} seconds")
-
-            # Process the input queue
-            while self.running:
-                try:
-                    # Check for new messages
-                    while not self.input_queue.empty():
-                        message = self.input_queue.get(block=False)
-
-                        if message['type'] == 'transcription' and message.get('is_final', False):
-                            # Add the sentence to the buffer with a timestamp
-                            self.translation_buffer.append(message['text'])
-                            self.sentence_timestamps.append(time.time())
-                            print(f"Added sentence to translation buffer: {message['text']}")
-
-                        elif message['type'] == 'command':
-                            command = message['command']
-                            if command == 'translate':
-                                # Force translation of current buffer
-                                self.translation_buffer.append(message['text'])
-                                self.sentence_timestamps.append(time.time())
-                            elif command == 'shutdown':
-                                # Translate any remaining text and exit
-                                if self.translation_buffer:
-                                    self._translate_buffer()
-                                self.running = False
-
-                    # Check if we should translate based on buffer size or time
-                    current_time = time.time()
-                    should_translate = False
-
-                    # Translate if buffer has reached batch size
-                    if len(self.translation_buffer) >= self.batch_size:
-                        should_translate = True
-
-                    # Translate if oldest sentence has been waiting too long
-                    elif self.translation_buffer and (current_time - self.sentence_timestamps[0] >= self.max_wait_time):
-                        should_translate = True
-
-                    if should_translate:
-                        self._translate_buffer()
-
-                    # Small sleep to prevent CPU hogging
-                    time.sleep(0.1)
-
-                except queue.Empty:
-                    pass
-                except Exception as e:
-                    logger.error(f"Error in translation processing: {str(e)}", exc_info=True)
+            asyncio.set_event_loop(self.loop)
+            self.loop.run_until_complete(self._process_input_queue())
 
         except Exception as e:
             logger.error(f"Error in translation processor: {str(e)}", exc_info=True)
         finally:
             self.stop()
             print("Translation processor stopped")
+
+    async def _process_input_queue(self):
+        while self.running:
+            try:
+                # Wait for new messages in the input queue
+                message = await self.input_queue.get()
+                if message['command'] == 'translate':
+                    # Add the sentence to the buffer with a timestamp
+                    self.translation_buffer.append(message['text'])
+                    self.sentence_timestamps.append(time.time())
+                    print(f"Added sentence to translation buffer: {message['text']}")
+
+                # Check if we should translate based on buffer size or time
+                current_time = time.time()
+                should_translate = False
+
+                # Translate if buffer has reached batch size
+                if len(self.translation_buffer) >= self.batch_size:
+                    should_translate = True
+
+                # Translate if oldest sentence has been waiting too long
+                elif self.translation_buffer and (current_time - self.sentence_timestamps[0] >= self.max_wait_time):
+                    should_translate = True
+
+                if should_translate:
+                    self._translate_buffer()
+
+            except asyncio.QueueEmpty:
+                pass
+            except Exception as e:
+                logger.error(f"Error processing input queue: {str(e)}", exc_info=True)
 
     def _translate_buffer(self):
         """Translate all sentences in the buffer"""
@@ -157,13 +136,14 @@ class TranslationProcessor(threading.Thread):
 
             # Send all results to output queue
             for result in results:
-                self.output_queue.put({
-                    'type': 'translation',
-                    'original': result['original'],
-                    'translated': result['translated'],
-                    'is_final': True,
-                    'processing_time': result['processing_time']
-                })
+                asyncio.run_coroutine_threadsafe(
+                    self.output_queue.put({
+                        'type': 'translation',
+                        'original': result['original'],
+                        'translated': result['translated'],
+                        'is_final': True,
+                        'processing_time': result['processing_time']
+                    }), self.loop)
 
             # Clear the buffer and timestamps
             self.translation_buffer = []

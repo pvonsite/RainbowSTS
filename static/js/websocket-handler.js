@@ -109,7 +109,7 @@ class WebSocketHandler {
                             // Update UI with translated text
                             const translatedTextElement = document.getElementById('translated-text');
                             if (translatedTextElement) {
-                                translatedTextElement.textContent = data.translated;
+                                translatedTextElement.textContent += data.translated;
                             }
                             break;
 

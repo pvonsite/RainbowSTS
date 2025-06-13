@@ -4,7 +4,7 @@
 class AudioRecorder {
     constructor(websocketHandler) {
         this.websocketHandler = websocketHandler;
-        this.mediaRecorder = null;
+        this.recorderNode = null;
         this.audioChunks = [];
         this.isRecording = false;
         this.statusElement = document.getElementById('status');
@@ -25,14 +25,14 @@ class AudioRecorder {
             await audioContext.audioWorklet.addModule('static/js/recorder-worklet.js');
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             const input = audioContext.createMediaStreamSource(stream);
-            const recorderNode = new AudioWorkletNode(audioContext, 'recorder-worklet');
+            this.recorderNode = new AudioWorkletNode(audioContext, 'recorder-worklet');
 
-            recorderNode.port.onmessage = (event) => {
+            this.recorderNode.port.onmessage = (event) => {
                 this.processAudioChunk(event.data, audioContext.sampleRate)
             }
 
-            input.connect(recorderNode);
-            recorderNode.connect(audioContext.destination);
+            input.connect(this.recorderNode);
+            this.recorderNode.connect(audioContext.destination);
 
             this.isRecording = true
 
@@ -46,9 +46,8 @@ class AudioRecorder {
     }
 
     stopRecording() {
-        if (this.mediaRecorder && this.isRecording) {
-            this.mediaRecorder.stop();
-            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        if (this.recorderNode && this.isRecording) {
+            this.recorderNode.stopRecording()
             this.isRecording = false;
             this.statusElement.textContent = 'Status: Recording stopped';
         }

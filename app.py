@@ -70,7 +70,7 @@ def start_session():
         }
 
         translation_config = {
-            'model': config.get('translation_model', 'm2m100_418m'),
+            'model': config.get('translation_model', 'facebook/m2m100_418M'),
             'source_language': config.get('source_language', 'en'),
             'target_language': config.get('target_language', 'vi'),
         }
