@@ -69,8 +69,11 @@
     audioCaptureSelector.addEventListener("change", (event) => {
       const selectedDeviceId = event.target.value;
       if (!selectedDeviceId) return event.preventDefault();
+      state.setAudioCaptureDevice(selectedDeviceId);
+    });
 
-      audioDeviceManager.setDevice("input", selectedDeviceId);
+    state.addEventListener("audioCaptureDeviceChanged", () => {
+      audioCaptureSelector.value = state.audioCaptureDevice;
     });
 
     const audioPlaybackSelector = document.getElementById("audio-playback");
@@ -87,8 +90,11 @@
     audioPlaybackSelector.addEventListener("change", () => {
       const selectedDeviceId = event.target.value;
       if (!selectedDeviceId) return event.preventDefault();
+      state.setAudioPlaybackDevice(selectedDeviceId);
+    });
 
-      audioDeviceManager.setDevice("output", selectedDeviceId);
+    state.addEventListener("audioPlaybackDeviceChanged", () => {
+      audioPlaybackSelector.value = state.audioPlaybackDevice;
     });
   })();
 </script>

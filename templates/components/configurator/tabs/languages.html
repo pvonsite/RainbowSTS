@@ -46,5 +46,20 @@
 
     populateLanguageOptions(sourceLanguageSelector, supportedSrcLanguages);
     populateLanguageOptions(destLanguageSelector, supportedDstLanguages);
+
+    sourceLanguageSelector.addEventListener("change", (event) =>
+      state.setSourceLanguage(event.target.value),
+    );
+    destLanguageSelector.addEventListener("change", (event) =>
+      state.setDestLanguage(event.target.value),
+    );
+
+    state.addEventListener("sourceLanguageChanged", () => {
+      sourceLanguageSelector.value = state.sourceLanguage;
+    });
+
+    state.addEventListener("destLanguageChanged", () => {
+      destLanguageSelector.value = state.destLanguage;
+    });
   })();
 </script>

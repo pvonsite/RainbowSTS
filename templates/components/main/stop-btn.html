@@ -6,11 +6,16 @@
     height: 4rem;
   }
 
+  #stop-btn.disabled {
+    color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
   #stop-btn:hover {
     box-shadow: rgba(222, 62, 68, 0.08) 0px 0px 2px 6px;
   }
 </style>
 
-<button id="stop-btn" class="glassy btn dense">
+<button id="stop-btn" class="glassy btn dense disabled">
   {% include 'icons/stop.svg' %}
 </button>

@@ -55,7 +55,12 @@
     );
 
     sttModelSelector.addEventListener("change", (event) =>
-      sttModelManager.setModel(event.target.value),
+      state.setSpeechToTextModel(event.target.value),
+    );
+
+    state.addEventListener(
+      "speechToTextModelChanged",
+      () => (sttModelSelector.value = state.speechToTextModel),
     );
   })();
 </script>

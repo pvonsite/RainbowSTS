@@ -35,7 +35,7 @@
   class="flex flex-column align-center justify-even w-full flex-1"
 >
   <div class="flex flex-column w-full align-center">
-    <h1 id="title" class="text-center">Let's start</h1>
+    <h1 id="title" class="text-center">Let's speak</h1>
 
     <div
       id="main-btn-group"
@@ -65,43 +65,28 @@
     const configuratorBtn = document.getElementById("configurator-btn");
     const configurator = document.getElementById("configurator");
 
-    let session = null;
-    let paused = false;
+    const playBtnStates = ["waiting", "connecting", "playing", "paused"];
 
     const changePlayBtnState = (state) => {
-      playBtn.classList.remove("waiting", "connecting", "playing", "paused");
+      playBtn.classList.remove(...playBtnStates);
       playBtn.classList.add(state);
     };
 
-    playBtn.addEventListener("click", async () => {
-      if (!session) {
-        // start session
-        title.textContent = "Connecting to server";
-        changePlayBtnState("connecting");
-        playBtn.classList.add("disabled");
-
-        // do something
-        title.textContent = "I'm listening";
-      }
-
-      if (!paused) {
-        // pause session
-      }
-
-      paused = false;
-      title.textContent = "I'm listening";
-    });
-
-    stopBtn.addEventListener("click", () => {
-      if (session) {
-        // stop session
-        title.textContent = "Let's speak";
-        session = null;
-      }
-    });
+    playBtn.addEventListener("click", () =>
+      state.isWaiting ? state.play() : state.pause(),
+    );
+    stopBtn.addEventListener("click", () => state.stop());
 
     configuratorBtn.addEventListener("click", () =>
       configurator.dispatchEvent(new Event("open")),
+    );
+
+    state.addEventListener("titleChanged", () => {
+      title.textContent = state.title;
+    });
+
+    state.addEventListener("stateChanged", () =>
+      changePlayBtnState(playBtnStates[state.state]),
     );
   })();
 </script>

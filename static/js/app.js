@@ -4,6 +4,7 @@
   window.sttModelManager = new STTModelManager();
   window.websocketHandler = new WebSocketHandler();
   window.audioRecorder = new AudioRecorder(websocketHandler);
+  window.state = new State();
   window.sessionManager = new SessionManager(
     audioDeviceManager,
     websocketHandler,
@@ -20,4 +21,3 @@
 
   console.log("Application initialized");
 })();
-
