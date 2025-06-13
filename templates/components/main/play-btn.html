@@ -127,6 +127,20 @@
     box-shadow: rgba(2, 129, 255, 0.08) 0px 0px 2px 6px;
   }
 
+  #play-btn.stopping > div:nth-child(5) {
+    opacity: 1;
+    color: rgba(2, 129, 255, 0.9);
+    background-color: rgba(2, 129, 255, 0.16);
+  }
+
+  #play-btn.stopping:hover {
+    box-shadow: rgba(2, 129, 255, 0.08) 0px 0px 2px 6px;
+  }
+
+  #play-btn.stopping:hover > div:nth-child(5) {
+    color: rgba(2, 129, 255, 1);
+  }
+
   @keyframes breathing {
     0% {
       box-shadow: rgba(2, 129, 255, 0.12) 0px 0px 2px 6px;
@@ -152,5 +166,8 @@
   </div>
   <div class="flex align-center justify-center">
     {% include 'icons/pause.svg' %}
+  </div>
+  <div class="flex align-center justify-center">
+    <div class="dot-carousel"></div>
   </div>
 </button>

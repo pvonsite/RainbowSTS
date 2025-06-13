@@ -65,7 +65,13 @@
     const configuratorBtn = document.getElementById("configurator-btn");
     const configurator = document.getElementById("configurator");
 
-    const playBtnStates = ["waiting", "connecting", "playing", "paused"];
+    const playBtnStates = [
+      "waiting",
+      "connecting",
+      "playing",
+      "paused",
+      "stopping",
+    ];
 
     const changePlayBtnState = (state) => {
       playBtn.classList.remove(...playBtnStates);
@@ -76,7 +82,7 @@
     };
 
     playBtn.addEventListener("click", () =>
-      state.isWaiting ? state.play() : state.pause(),
+      state.isWaiting || state.isPaused ? state.play() : state.pause(),
     );
 
     stopBtn.addEventListener("click", () => state.stop());

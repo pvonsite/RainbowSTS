@@ -4,19 +4,30 @@ class State extends EventTarget {
     "Connecting to server",
     "I'm listening",
     "Taking break",
+    "Disconnecting",
   ];
 
-  static STATES = { WAITING: 0, CONNECTING: 1, PLAYING: 2, PAUSED: 3 };
+  static STATES = {
+    WAITING: 0,
+    CONNECTING: 1,
+    PLAYING: 2,
+    PAUSED: 3,
+    STOPPING: 4,
+  };
 
   title = State.TITLES[State.STATES.WAITING];
   state = State.STATES.WAITING;
+
   selectedS2tModel = "";
   selectedT2sModel = "";
   selectedTransModel = "";
+
   selectedAudioCaptureDevice = "";
   selectedAudioPlaybackDevice = "";
+
   srcLanguage = "";
   dstLanguage = "";
+
   session = null;
 
   constructor() {
@@ -29,7 +40,8 @@ class State extends EventTarget {
   }
 
   async play() {
-    if (this.state !== State.STATES.WAITING) return;
+    if (![State.STATES.WAITING, State.STATES.PAUSED].includes(this.state))
+      return;
 
     if (this.session) {
       this.session.play();
@@ -54,9 +66,15 @@ class State extends EventTarget {
   }
 
   async stop() {
-    if (this.state !== State.STATES.PAUSED) {
-      return;
-    }
+    if (this.state !== State.STATES.PAUSED) return;
+
+    this.setState(State.STATES.STOPPING);
+
+    const success = await sessionManager.stopSession();
+
+    if (!success) return;
+
+    this.setState(State.STATES.WAITING);
   }
 
   setSourceLanguage(language) {
