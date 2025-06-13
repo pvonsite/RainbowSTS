@@ -70,11 +70,15 @@
     const changePlayBtnState = (state) => {
       playBtn.classList.remove(...playBtnStates);
       playBtn.classList.add(state);
+
+      if (state === "paused") stopBtn.classList.remove("disabled");
+      else stopBtn.classList.add("disabled");
     };
 
     playBtn.addEventListener("click", () =>
       state.isWaiting ? state.play() : state.pause(),
     );
+
     stopBtn.addEventListener("click", () => state.stop());
 
     configuratorBtn.addEventListener("click", () =>
