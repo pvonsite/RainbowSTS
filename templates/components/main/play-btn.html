@@ -1,0 +1,156 @@
+<style>
+  #play-btn {
+    position: relative;
+    width: calc(4rem + 32px);
+    height: calc(4rem + 32px);
+  }
+
+  .dot-carousel {
+    position: relative;
+    left: -9999px;
+    width: 12px;
+    height: 12px;
+    border-radius: 100%;
+    background-color: transparent;
+    color: #0281ff;
+    box-shadow:
+      9979px 0 0 0 #0281ff,
+      9999px 0 0 0 #0281ff,
+      10019px 0 0 0 #0281ff;
+    animation: dot-carousel 1.2s infinite linear;
+  }
+
+  @keyframes dot-carousel {
+    0% {
+      box-shadow:
+        9979px 0 0 -1px #0281ff,
+        9999px 0 0 1px #0281ff,
+        10019px 0 0 -1px #0281ff;
+    }
+    50% {
+      box-shadow:
+        10019px 0 0 -1px #0281ff,
+        9979px 0 0 -1px #0281ff,
+        9999px 0 0 1px #0281ff;
+    }
+    100% {
+      box-shadow:
+        9999px 0 0 1px #0281ff,
+        10019px 0 0 -1px #0281ff,
+        9979px 0 0 -1px #0281ff;
+    }
+  }
+
+  #play-btn > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 100%;
+    opacity: 0;
+    transition:
+      opacity 0.2s ease-in-out,
+      color 0.2s ease-in-out;
+  }
+
+  #play-btn.waiting > div:nth-child(1) {
+    opacity: 1;
+    color: rgba(2, 129, 255, 0.9);
+    background-color: rgba(2, 129, 255, 0.16);
+  }
+
+  #play-btn.waiting:hover {
+    box-shadow: rgba(2, 129, 255, 0.08) 0px 0px 2px 6px;
+  }
+
+  #play-btn.waiting:hover > div:nth-child(1) {
+    color: rgba(2, 129, 255, 1);
+  }
+
+  #play-btn > div:nth-child(2) > svg {
+    transform: scale(0.5);
+  }
+
+  #play-btn.connecting > div:nth-child(2) {
+    opacity: 1;
+    color: rgba(2, 129, 255, 0.9);
+    background-color: rgba(2, 129, 255, 0.16);
+  }
+
+  #play-btn.connecting:hover {
+    box-shadow: rgba(2, 129, 255, 0.08) 0px 0px 2px 6px;
+  }
+
+  #play-btn.connecting:hover > div:nth-child(2) {
+    color: rgba(2, 129, 255, 1);
+  }
+
+  #play-btn.playing:not(:hover) > div:nth-child(3) {
+    opacity: 1;
+    color: rgba(2, 129, 255, 0.9);
+    background-color: rgba(2, 129, 255, 0.16);
+  }
+
+  #play-btn.playing:not(:hover) {
+    animation: breathing 2s infinite;
+    box-shadow: rgba(2, 129, 255, 0.12) 0px 0px 2px 6px;
+  }
+
+  #play-btn.playing:hover {
+    box-shadow: rgba(2, 129, 255, 0.12) 0px 0px 2px 6px;
+  }
+
+  #play-btn.playing:hover > div:nth-child(4) {
+    opacity: 1;
+    color: rgba(2, 129, 255, 1);
+    background-color: rgba(2, 129, 255, 0.16);
+  }
+
+  #play-btn.paused:not(:hover) > div:nth-child(4) {
+    opacity: 1;
+    color: rgba(222, 62, 68, 0.9);
+    background-color: rgba(222, 62, 68, 0.16);
+  }
+
+  #play-btn.paused:not(:hover) {
+    box-shadow: rgba(222, 62, 68, 0.08) 0px 0px 2px 6px;
+  }
+
+  #play-btn.paused:hover > div:nth-child(1) {
+    opacity: 1;
+    color: rgba(2, 129, 255, 1);
+    background-color: rgba(2, 129, 255, 0.16);
+  }
+
+  #play-btn.paused:hover {
+    box-shadow: rgba(2, 129, 255, 0.08) 0px 0px 2px 6px;
+  }
+
+  @keyframes breathing {
+    0% {
+      box-shadow: rgba(2, 129, 255, 0.12) 0px 0px 2px 6px;
+    }
+    50% {
+      box-shadow: rgba(2, 129, 255, 0.24) 0px 0px 2px 12px;
+    }
+    100% {
+      box-shadow: rgba(2, 129, 255, 0.12) 0px 0px 2px 6px;
+    }
+  }
+</style>
+
+<button id="play-btn" class="glassy btn paused">
+  <div class="flex align-center justify-center">
+    {% include 'icons/play.svg' %}
+  </div>
+  <div class="flex align-center justify-center">
+    <div class="dot-carousel"></div>
+  </div>
+  <div class="flex align-center justify-center">
+    {% include 'icons/dot.svg' %}
+  </div>
+  <div class="flex align-center justify-center">
+    {% include 'icons/pause.svg' %}
+  </div>
+</button>

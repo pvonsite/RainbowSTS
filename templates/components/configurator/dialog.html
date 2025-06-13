@@ -1,0 +1,153 @@
+<style>
+  #configurator.open {
+    z-index: 99999;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.02);
+    backdrop-filter: blur(1px);
+  }
+
+  #configurator {
+    z-index: -1;
+    opacity: 0;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    right: 0;
+    padding: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  #configurator > div {
+    width: 100%;
+    max-width: 42rem;
+    height: 100%;
+    max-height: 28rem;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.24);
+    backdrop-filter: blur(16px);
+    border-radius: 2rem;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  #configurator nav > a {
+    padding: 1rem 1.5rem 1rem 2rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: white;
+    transition: all 0.2s ease-in-out;
+    border-right: 0.2rem solid transparent;
+  }
+
+  #configurator nav > a:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+
+  #configurator nav > a.active {
+    border-right: 0.2rem solid #0281ff;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  #configurator.open > div {
+    opacity: 1;
+  }
+
+  .configurator-actions {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  #configurator-close {
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    transition: box-shadow 0.2s ease-in-out;
+    background-color: rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  #configurator-close:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+</style>
+
+<dialog
+  id="configurator"
+  class="flex align-center justify-center border-none"
+  open="true"
+>
+  <div class="flex">
+    <nav id="configurator-nav" class="flex flex-column py-6">
+      <a data-tab="devices" class="active">Devices</a>
+      <a data-tab="models">Models</a>
+      <a data-tab="languages">Languages</a>
+    </nav>
+
+    <div
+      class="flex-1 flex flex-column p-4"
+      style="background-color: rgba(255, 255, 255, 0.95)"
+    >
+      {% include 'components/configurator/tabs/index.html' %}
+
+      <div class="flex justify-end configurator-actions">
+        <button id="configurator-close" class="rounded-full">Done</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  (() => {
+    const configurator = document.getElementById("configurator");
+    const mountPoint = configurator.children[0];
+    const nav = document.getElementById("configurator-nav");
+    const tabs = [...nav.children];
+    const tabPanel = document.getElementById("configurator-tabs");
+    const tabContent = tabPanel.children[0];
+
+    const audioCaptureSelector = document.getElementById("audio-capture");
+    const audioPlaybackSelector = document.getElementById("audio-playback");
+    const sttModelSelector = document.getElementById("stt-model");
+    const translationModelSelector =
+      document.getElementById("translation-model");
+    const ttsModelSelector = document.getElementById("tts-model");
+
+    const close = () => {
+      configurator.classList.remove("open");
+      configurator.removeAttribute("open");
+    };
+
+    configurator.addEventListener("open", async (e) => {
+      configurator.classList.add("open");
+      configurator.setAttribute("open", "true");
+
+      await audioDeviceManager.loadDevices();
+      await sttModelManager.initialize();
+
+      audioCaptureSelector.dispatchEvent(new Event("reload"));
+      audioPlaybackSelector.dispatchEvent(new Event("reload"));
+      sttModelSelector.dispatchEvent(new Event("reload"));
+      translationModelSelector.dispatchEvent(new Event("reload"));
+      ttsModelSelector.dispatchEvent(new Event("reload"));
+    });
+
+    configurator.addEventListener("click", (e) => {
+      if (e.target === configurator) close();
+    });
+
+    nav.addEventListener("click", (e) => {
+      const tab = e.target.getAttribute("data-tab");
+
+      if (!tab) return;
+
+      tabs.forEach((tab) => tab.classList.remove("active"));
+      e.target.classList.add("active");
+      tabContent.setAttribute("data-tab", tab);
+    });
+
+    document
+      .getElementById("configurator-close")
+      .addEventListener("click", close);
+  })();
+</script>

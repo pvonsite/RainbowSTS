@@ -1,0 +1,68 @@
+<style>
+  #text {
+    width: 80%;
+    max-width: 60rem;
+    overflow: hidden;
+  }
+
+  #text .text {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: transparent;
+    text-align: right;
+    direction: rtl;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 1);
+    width: 100%;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      rgba(255, 255, 255, 0.9) 100%
+    );
+    background-clip: text;
+    white-space: nowrap;
+  }
+
+  #text .fullsentence {
+    width: 100%;
+    border-radius: 2rem;
+    box-sizing: border-box;
+    padding: 0.5rem 1rem;
+    margin-top: 2rem;
+    background-color: rgba(255, 255, 255, 0.7);
+  }
+
+  #text .fullsentence h2 {
+    font-weight: 500;
+  }
+
+  #text .convo {
+    padding-bottom: 1rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+</style>
+
+<div id="text" class="flex flex-column align-center">
+  <div id="original-text" class="text" data-kind="original">
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+    tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+    quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+    consequat.
+  </div>
+
+  <div class="fullsentence flex glassy">
+    <div class="flex-1 flex flex-column">
+      <h2 class="text-center">Original Conversation</h2>
+
+      <div id="original-conversation" class="flex-1 convo">a</div>
+    </div>
+
+    <div class="flex-1 flex flex-column">
+      <h2 class="text-center">Translated Conversation</h2>
+
+      <div id="translated-conversation" class="flex-1 convo">b</div>
+    </div>
+  </div>
+</div>

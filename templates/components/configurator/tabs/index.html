@@ -1,0 +1,61 @@
+<style>
+  #configurator-tabs {
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .configurator-tabs__content {
+    overflow: hidden;
+    height: 100%;
+  }
+
+  .configurator-tabs__content--inner {
+    height: 300%;
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .configurator-tabs__content[data-tab="devices"]
+    .configurator-tabs__content--inner {
+    transform: translateY(0);
+  }
+
+  .configurator-tabs__content[data-tab="models"]
+    .configurator-tabs__content--inner {
+    transform: translateY(-33.3333%);
+  }
+
+  .configurator-tabs__content[data-tab="languages"]
+    .configurator-tabs__content--inner {
+    transform: translateY(-66.6666%);
+  }
+
+  .configurator-tabs__tab {
+    height: 33.3333%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .configurator-tabs__tab fieldset {
+    display: flex;
+    display: flexbox;
+    display: -webkit-flex;
+    flex-direction: column;
+  }
+
+  .configurator-tabs__tab label {
+    font-size: 1.2rem;
+    display: block;
+  }
+</style>
+
+<div id="configurator-tabs" class="flex-1 flex flex-column">
+  <div class="configurator-tabs__content">
+    <div class="configurator-tabs__content--inner">
+      {% include 'components/configurator/tabs/devices.html' %}
+      <!-- -->
+      {% include 'components/configurator/tabs/models.html' %}
+      <!-- -->
+      {% include 'components/configurator/tabs/languages.html' %}
+    </div>
+  </div>
+</div>

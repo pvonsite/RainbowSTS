@@ -1,0 +1,90 @@
+<div class="configurator-tabs__tab">
+  <fieldset>
+    <label for="audio-capture">Audio Capture source</label>
+
+    <select id="audio-capture" class="multiselect">
+      <option value="">Choose your capture device</option>
+    </select>
+
+    <br />
+
+    <label for="audio-playback">Audio Playback target</label>
+
+    <select id="audio-playback" class="multiselect">
+      <option value="">Choose your playback device</option>
+    </select>
+  </fieldset>
+</div>
+
+<script>
+  (() => {
+    const audioCaptureSelector = document.getElementById("audio-capture");
+
+    const createAudioGroup = (label, devices) => {
+      const group = document.createElement("optgroup");
+      group.label = label;
+
+      devices.forEach((device) => {
+        const option = document.createElement("option");
+        option.value = device.deviceId;
+        const labelText =
+          device.label || `Device ${device.deviceId.slice(0, 5)}...`;
+        option.textContent = labelText;
+        group.appendChild(option);
+      });
+
+      return group;
+    };
+
+    const groups = [
+      ["Virtual Audio Devices (VB-Cable, etc.)", "virtual"],
+      ["Physical Microphones", "physical"],
+      ["System Devices", "other"],
+    ];
+
+    const reloadSelections = (target, filter) => {
+      [...target.children]
+        .slice(1)
+        .forEach((child) => target.removeChild(child));
+
+      groups.forEach(([label, groupId]) => {
+        if (!audioDeviceManager.deviceGroups[groupId]) return;
+        const group = createAudioGroup(
+          label,
+          audioDeviceManager.deviceGroups[groupId].filter(filter),
+        );
+        target.appendChild(group);
+      });
+    };
+
+    audioCaptureSelector.addEventListener("reload", async () => {
+      reloadSelections(
+        audioCaptureSelector,
+        (device) => device.kind === "audioinput",
+      );
+    });
+
+    audioCaptureSelector.addEventListener("change", (event) => {
+      const selectedDeviceId = event.target.value;
+      if (!selectedDeviceId) return event.preventDefault();
+
+      audioDeviceManager.setDevice("input", selectedDeviceId);
+    });
+
+    const audioPlaybackSelector = document.getElementById("audio-playback");
+
+    audioPlaybackSelector.addEventListener("reload", () => {
+      reloadSelections(
+        audioPlaybackSelector,
+        (device) => device.kind === "audiooutput",
+      );
+    });
+
+    audioPlaybackSelector.addEventListener("change", () => {
+      const selectedDeviceId = event.target.value;
+      if (!selectedDeviceId) return event.preventDefault();
+
+      audioDeviceManager.setDevice("output", selectedDeviceId);
+    });
+  })();
+</script>

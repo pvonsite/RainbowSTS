@@ -1,0 +1,61 @@
+<div class="configurator-tabs__tab">
+  <fieldset>
+    <label for="stt-model">Speech-to-text Model</label>
+
+    <select class="multiselect" id="stt-model">
+      <option value="">Choose your Speech-to-text model</option>
+    </select>
+
+    <br />
+
+    <label for="translation-model">Translation Model</label>
+
+    <select class="multiselect" id="translation-model">
+      <option value="">Choose your Translation model</option>
+    </select>
+
+    <br />
+
+    <label for="tts-model">Text-to-speech Model</label>
+
+    <select class="multiselect" id="tts-model">
+      <option value="">Choose your Text-to-speech model</option>
+    </select>
+  </fieldset>
+</div>
+
+<script>
+  (() => {
+    const sttModelSelector = document.getElementById("stt-model");
+    const translationModelSelector =
+      document.getElementById("translation-model");
+    const ttsModelSelector = document.getElementById("tts-model");
+
+    const reloadSelections = (target, models, selected) => {
+      [...target.children]
+        .slice(1)
+        .forEach((child) => target.removeChild(child));
+
+      models.forEach((model) => {
+        const option = document.createElement("option");
+        option.value = model;
+        option.textContent = model;
+        target.appendChild(option);
+      });
+
+      if (selected) target.value = selected;
+    };
+
+    sttModelSelector.addEventListener("reload", () =>
+      reloadSelections(
+        sttModelSelector,
+        sttModelManager.models,
+        sttModelManager.selectedModel,
+      ),
+    );
+
+    sttModelSelector.addEventListener("change", (event) =>
+      sttModelManager.setModel(event.target.value),
+    );
+  })();
+</script>

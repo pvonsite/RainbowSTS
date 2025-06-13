@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Title</title>
+  </head>
+  <body>
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Real-time Speech Translation</title>
+        <link
+          rel="stylesheet"
+          href="{{ url_for('static', filename='css/styles.css') }}"
+        />
+      </head>
+      <body>
+        <div class="container">
+          <h1>Real-time Speech Translation</h1>
+
+          <div class="config-panel">
+            <h2>Configuration</h2>
+            <div class="config-item">
+              <label for="audio-device">Audio Input Device:</label>
+              <select id="audio-device">
+                <option value="">Loading audio devices...</option>
+              </select>
+              <div class="device-info" id="device-info"></div>
+            </div>
+            <div class="config-item">
+              <label for="stt-model">STT Model:</label>
+              <select id="stt-model">
+                <option value="base">Base (English)</option>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large-v2">Large-v2</option>
+              </select>
+            </div>
+            <div class="config-item">
+              <label for="source-language">Source Language:</label>
+              <select id="source-language">
+                <option value="en">English</option>
+                <option value="fr">French</option>
+                <option value="es">Spanish</option>
+                <option value="de">German</option>
+                <option value="zh">Chinese</option>
+                <option value="ja">Japanese</option>
+              </select>
+            </div>
+            <div class="config-item">
+              <label for="target-language">Target Language:</label>
+              <select id="target-language">
+                <option value="fr">French</option>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="de">German</option>
+                <option value="zh">Chinese</option>
+                <option value="ja">Japanese</option>
+                <option value="vi">Vietnamese</option>
+              </select>
+            </div>
+            <button id="start-btn">Start Session</button>
+            <button id="stop-btn" disabled>Stop Session</button>
+          </div>
+
+          <div class="status" id="status">Status: Ready</div>
+
+          <div class="control-panel">
+            <button id="start-listening-btn" disabled>Start Listening</button>
+            <button id="stop-listening-btn" disabled>Stop Listening</button>
+            <button id="refresh-devices-btn">Refresh Audio Devices</button>
+          </div>
+
+          <div class="result-panel">
+            <h2>Results</h2>
+            <div>
+              <h3>Original Text:</h3>
+              <div class="original-text" id="original-text"></div>
+            </div>
+            <div>
+              <h3>Translated Text:</h3>
+              <div class="translated-text" id="translated-text"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- JavaScript files -->
+        <script src="{{ url_for('static', filename='js/transcribe.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/audio-devices.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/stt-model-manager.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/websocket-handler.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/audio-recorder.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/session-manager.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+      </body>
+    </html>
+  </body>
+</html>
+

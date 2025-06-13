@@ -1,0 +1,111 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.config-panel,
+.result-panel {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.result-panel {
+  min-height: 200px;
+}
+
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+select,
+input {
+  padding: 8px;
+  margin: 5px 0;
+  width: 100%;
+  max-width: 400px;
+}
+
+.status {
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.original-text,
+.translated-text {
+  padding: 10px;
+  margin: 10px 0;
+  border-left: 3px solid #ccc;
+}
+
+.translated-text {
+  border-left-color: #007bff;
+}
+
+.config-item {
+  margin-bottom: 15px;
+}
+
+.config-item label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.device-info {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 3px;
+}
+
+.device-group {
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #555;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 3px;
+}
+
+.virtual-device {
+  color: #0066cc;
+}
+
+.physical-device {
+  color: #006600;
+}
+
+.setup-tip {
+  background-color: #f8f9fa;
+  border-left: 4px solid #17a2b8;
+  padding: 10px 15px;
+  margin: 15px 0;
+  font-size: 0.9em;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.75em;
+  margin-left: 5px;
+  color: white;
+}
+
+.badge-virtual {
+  background-color: #0066cc;
+}
+
+.badge-physical {
+  background-color: #006600;
+}
+

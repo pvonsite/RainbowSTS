@@ -1,0 +1,50 @@
+<div class="configurator-tabs__tab">
+  <fieldset>
+    <label for="source-language">Source language</label>
+
+    <select class="multiselect" id="source-language">
+      <option value="">Choose your source language</option>
+    </select>
+
+    <br />
+
+    <label for="dest-language">Destination language</label>
+
+    <select class="multiselect" id="dest-language">
+      <option value="">Choose your destination language</option>
+    </select>
+  </fieldset>
+</div>
+
+<script>
+  (() => {
+    const supportedSrcLanguages = {
+      en: "English",
+      fr: "French",
+      es: "Spanish",
+      de: "German",
+      zh: "Chinese",
+      ja: "Japanese",
+    };
+
+    const supportedDstLanguages = {
+      ...supportedSrcLanguages,
+      vi: "Vietnamese",
+    };
+
+    const sourceLanguageSelector = document.getElementById("source-language");
+    const destLanguageSelector = document.getElementById("dest-language");
+
+    const populateLanguageOptions = (target, langs) => {
+      Object.keys(langs).forEach((lang) => {
+        const option = document.createElement("option");
+        option.value = lang;
+        option.textContent = langs[lang];
+        target.appendChild(option);
+      });
+    };
+
+    populateLanguageOptions(sourceLanguageSelector, supportedSrcLanguages);
+    populateLanguageOptions(destLanguageSelector, supportedDstLanguages);
+  })();
+</script>

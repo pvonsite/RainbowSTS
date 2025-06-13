@@ -1,0 +1,101 @@
+<style>
+  #main {
+    overflow: hidden;
+  }
+
+  #title {
+    font-weight: 500;
+    color: #fdfdfd;
+    font-size: 3rem;
+    margin-bottom: 2rem;
+  }
+
+  #configurator-btn {
+    position: fixed;
+    right: 2rem;
+    bottom: 2rem;
+    padding-bottom: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  #configurator-btn:hover {
+    color: rgba(2, 129, 255, 0.9);
+    background-color: rgba(2, 129, 255, 0.16);
+    box-shadow: rgba(2, 129, 255, 0.12) 0px 0px 2px 6px;
+  }
+
+  #configurator-btn:active {
+    color: rgba(2, 129, 255, 1);
+  }
+</style>
+
+<main
+  id="main"
+  class="flex flex-column align-center justify-even w-full flex-1"
+>
+  <div class="flex flex-column w-full align-center">
+    <h1 id="title" class="text-center">Let's start</h1>
+
+    <div id="main-btn-group" class="flex align-center w-full justify-center">
+      {% include 'components/main/play-btn.html' %}
+      <!-- -->
+      {% include 'components/main/stop-btn.html' %}
+    </div>
+  </div>
+
+  {% include 'components/main/text.html' %}
+
+  <button id="configurator-btn" class="glassy btn dense">
+    {% include 'icons/setting.svg' %}
+  </button>
+</main>
+
+<script>
+  (() => {
+    const title = document.getElementById("title");
+    const playBtn = document.getElementById("play-btn");
+    const stopBtn = document.getElementById("stop-btn");
+    const configuratorBtn = document.getElementById("configurator-btn");
+    const configurator = document.getElementById("configurator");
+
+    let session = null;
+    let paused = false;
+
+    const changePlayBtnState = (state) => {
+      playBtn.classList.remove("waiting", "connecting", "playing", "paused");
+      playBtn.classList.add(state);
+    };
+
+    playBtn.addEventListener("click", async () => {
+      if (!session) {
+        // start session
+        title.textContent = "Connecting to server";
+        changePlayBtnState("connecting");
+        playBtn.classList.add("disabled");
+
+        // do something
+        title.textContent = "I'm listening";
+      }
+
+      if (!paused) {
+        // pause session
+      }
+
+      paused = false;
+      title.textContent = "I'm listening";
+    });
+
+    stopBtn.addEventListener("click", () => {
+      if (session) {
+        // stop session
+        title.textContent = "Let's speak";
+        session = null;
+      }
+    });
+
+    configuratorBtn.addEventListener("click", () =>
+      configurator.dispatchEvent(new Event("open")),
+    );
+  })();
+</script>
