@@ -62,6 +62,8 @@
         audioCaptureSelector,
         (device) => device.kind === "audioinput",
       );
+      if (audioDeviceManager.selectedDevice.input)
+        audioCaptureSelector.value = audioDeviceManager.selectedDevice.input;
     });
 
     audioCaptureSelector.addEventListener("change", (event) => {
@@ -78,6 +80,8 @@
         audioPlaybackSelector,
         (device) => device.kind === "audiooutput",
       );
+      if (audioDeviceManager.selectedDevice.output)
+        audioPlaybackSelector.value = audioDeviceManager.selectedDevice.output;
     });
 
     audioPlaybackSelector.addEventListener("change", () => {
