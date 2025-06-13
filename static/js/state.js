@@ -28,6 +28,7 @@ class State extends EventTarget {
   srcLanguage = "";
   dstLanguage = "";
 
+  liveText = "";
   translatedText = "";
   originalText = "";
 
@@ -61,7 +62,7 @@ class State extends EventTarget {
       return;
     }
 
-    sessionManager.startListening();
+    setTimeout(() => sessionManager.startListening(), 1000);
     this.setState(State.STATES.PLAYING);
   }
 
@@ -127,6 +128,12 @@ class State extends EventTarget {
   setState(state) {
     this.state = state;
     this.dispatchEvent(new Event("stateChanged"));
+  }
+
+  pushLiveToken(text) {
+    this.liveText += text;
+    this.liveText = this.liveText.slice(-1000);
+    this.dispatchEvent(new Event("liveTextChanged"));
   }
 
   pushOriginalToken(token) {
