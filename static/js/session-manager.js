@@ -87,28 +87,25 @@ class SessionManager {
   }
 
   async stopSession() {
-    if (this.sessionId) {
-      try {
-        await fetch(`/stop_session/${this.sessionId}`, {
-          method: "POST",
-        });
+    if (!this.sessionId) return false;
 
-        // Clean up
-        this.websocketHandler.disconnect();
-        this.audioRecorder.stopRecording();
+    try {
+      await fetch(`/stop_session/${this.sessionId}`, {
+        method: "POST",
+      });
 
-        // Update UI
-        this.startBtn.disabled = false;
-        this.stopBtn.disabled = true;
-        this.startListeningBtn.disabled = true;
-        this.stopListeningBtn.disabled = true;
-        this.refreshDevicesBtn.disabled = false;
-        this.statusElement.textContent = "Status: Session stopped";
+      // Clean up
+      this.websocketHandler.disconnect();
+      this.audioRecorder.stopRecording();
 
-        this.sessionId = null;
-      } catch (error) {
-        console.error("Error stopping session:", error);
-      }
+      // Update UI
+      notificator.success("Session", "Session stopped successfully.");
+      this.sessionId = null;
+      return true;
+    } catch (error) {
+      console.error("Error stopping session:", error);
+      notificator.error("Session", "Error stopping session");
+      return false;
     }
   }
 
