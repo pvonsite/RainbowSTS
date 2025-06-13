@@ -22,8 +22,8 @@ class State extends EventTarget {
   selectedT2sModel = "";
   selectedTransModel = "";
 
-  selectedAudioCaptureDevice = "";
-  selectedAudioPlaybackDevice = "";
+  selectedAudioCaptureDevice = "default";
+  selectedAudioPlaybackDevice = "default";
 
   srcLanguage = "";
   dstLanguage = "";
