@@ -3,6 +3,8 @@ import asyncio
 import logging
 import threading
 import time
+import queue
+from collections import deque
 
 import torch
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
@@ -33,9 +35,16 @@ class TranslationProcessor(threading.Thread):
         self.translation_buffer = []  # Buffer to store sentences for batch translation
         self.sentence_timestamps = []  # Timestamps for when sentences were added
 
+        # Translation queue for the worker thread
+        self.translation_queue = queue.Queue()
+
+        # Keep track of previously translated sentences
+        self.previous_sentences = deque(maxlen=10)  # Store last 10 translated sentences
+
         # Batch translation configuration
         self.batch_size = config.get('batch_size', 3)  # Translate when buffer reaches this size
-        self.max_wait_time = config.get('max_wait_time', 2.0)  # Seconds to wait before translating
+        self.max_wait_time = config.get('max_wait_time', 5.0)  # Seconds to wait before translating
+        self.min_previous_sentences = 2  # Minimum number of previous sentences to include
 
         # Translation model configuration
         self.model_name = config.get('model', 'facebook/m2m100_418M')
@@ -53,6 +62,10 @@ class TranslationProcessor(threading.Thread):
         self.tokenizer.src_lang = self.source_language
         print(f"Model loaded in {time.time() - start_time:.2f} seconds")
 
+        # Start the translation worker thread
+        self.translation_thread = threading.Thread(target=self._translation_worker, daemon=True)
+        self.loop = None
+
         print(f"Initialized TranslationProcessor with device: {self.device}")
 
     def run(self):
@@ -60,6 +73,7 @@ class TranslationProcessor(threading.Thread):
         try:
             self.running = True
             print("Translation processor starting...")
+            self.translation_thread.start()
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
             self.loop.run_until_complete(self._process_input_queue())
@@ -94,80 +108,125 @@ class TranslationProcessor(threading.Thread):
                     should_translate = True
 
                 if should_translate:
-                    self._translate_buffer()
+                    self._prepare_translation_batch()
 
             except asyncio.QueueEmpty:
                 pass
             except Exception as e:
                 logger.error(f"Error processing input queue: {str(e)}", exc_info=True)
 
-    def _translate_buffer(self):
-        """Translate all sentences in the buffer"""
+    def _prepare_translation_batch(self):
+        """Prepare a batch for translation and send to the translation queue"""
         if not self.translation_buffer:
             return
 
         try:
-            print(f"Translating batch of {len(self.translation_buffer)} sentences")
+            batch = []
+            timestamps = []
 
-            results = []
-            # Process each sentence
-            for i, sentence in enumerate(self.translation_buffer):
-                start_time = time.time()
+            # Add current sentences to the batch
+            batch.extend(self.translation_buffer)
+            timestamps.extend(self.sentence_timestamps)
 
-                # Encode and translate
-                encoded = self.tokenizer(sentence, return_tensors="pt").to(self.device)
-                generated_tokens = self.model.generate(
-                    **encoded,
-                    forced_bos_token_id=self.tokenizer.get_lang_id(self.target_language)
-                )
+            # Add previous sentences to ensure continuity
+            prev_count = min(len(self.previous_sentences), self.min_previous_sentences)
+            if prev_count > 0:
+                # Get the most recent previous sentences
+                prev_sentences = list(self.previous_sentences)[-prev_count:]
+                # Add them to the beginning of the batch
+                batch = prev_sentences + batch
+                # Add dummy timestamps for previous sentences
+                timestamps = [timestamps[0] - 0.1] * prev_count + timestamps
 
-                # Decode the result
-                translated_text = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
+            print(f"Sending batch of {len(batch)} sentences to translation queue")
 
-                # Create result object
-                result = {
-                    'original': sentence,
-                    'translated': translated_text,
-                    'processing_time': time.time() - start_time
-                }
-                results.append(result)
-
-                print(f"Translated: {sentence} → {translated_text}")
-
-            # Send all results to output queue
-            for result in results:
-                asyncio.run_coroutine_threadsafe(
-                    self.output_queue.put({
-                        'type': 'translation',
-                        'original': result['original'],
-                        'translated': result['translated'],
-                        'is_final': True,
-                        'processing_time': result['processing_time']
-                    }), self.loop)
+            # Send to translation queue with timestamps
+            self.translation_queue.put((batch, timestamps, prev_count))
 
             # Clear the buffer and timestamps
             self.translation_buffer = []
             self.sentence_timestamps = []
 
         except Exception as e:
-            logger.error(f"Error translating buffer: {str(e)}", exc_info=True)
+            logger.error(f"Error preparing translation batch: {str(e)}", exc_info=True)
+
+    def _translation_worker(self):
+        """Worker thread that processes the translation queue"""
+        while self.running or not self.translation_queue.empty():
+            try:
+                # Get the next batch from the queue
+                batch, timestamps, prev_count = self.translation_queue.get(timeout=1.0)
+
+                if not batch:
+                    continue
+
+                print(f"Translating batch of {len(batch)} sentences (including {prev_count} previous sentences)")
+
+                results = []
+                # Process each sentence
+                for i, sentence in enumerate(batch):
+                    start_time = time.time()
+
+                    # Skip re-translating previous sentences
+                    if i < prev_count:
+                        # This is a previous sentence, already translated
+                        results.append({
+                            'original': sentence,
+                            'translated': None,  # Will be filtered out later
+                            'processing_time': 0.0,
+                            'is_previous': True
+                        })
+                        continue
+
+                    # Encode and translate
+                    encoded = self.tokenizer(sentence, return_tensors="pt").to(self.device)
+                    generated_tokens = self.model.generate(
+                        **encoded,
+                        forced_bos_token_id=self.tokenizer.get_lang_id(self.target_language)
+                    )
+
+                    # Decode the result
+                    translated_text = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
+
+                    # Create result object
+                    result = {
+                        'original': sentence,
+                        'translated': translated_text,
+                        'processing_time': time.time() - start_time,
+                        'is_previous': False
+                    }
+                    results.append(result)
+                    print(f"Translated: {sentence} → {translated_text}")
+
+                    # Add to previous sentences for future batches
+                    self.previous_sentences.append(sentence)
+
+                # Send new results to output queue (skip previous sentences)
+                for result in results:
+                    if not result.get('is_previous', False):
+                        asyncio.run_coroutine_threadsafe(
+                            self.output_queue.put({
+                                'type': 'translation',
+                                'original': result['original'],
+                                'translated': result['translated'],
+                                'is_final': True,
+                                'processing_time': result['processing_time']
+                            }), self.loop)
+
+                self.translation_queue.task_done()
+
+            except queue.Empty:
+                # No translations to process, continue waiting
+                pass
+            except Exception as e:
+                logger.error(f"Error in translation worker thread: {str(e)}", exc_info=True)
 
     def stop(self):
         """Stop the translation processor"""
-        if not self.running:
-            return
-
-        print("Stopping translation processor")
         self.running = False
+        if hasattr(self, 'loop') and self.loop:
+            for task in asyncio.all_tasks(self.loop):
+                task.cancel()
 
-        # Translate any remaining sentences
-        if self.translation_buffer:
-            try:
-                self._translate_buffer()
-            except:
-                pass
+        self.translation_thread.join()
 
-        # Release resources
-        self.model = None
-        self.tokenizer = None
-        torch.cuda.empty_cache()  # Free GPU memory if using CUDA
