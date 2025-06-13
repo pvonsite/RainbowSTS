@@ -62,47 +62,5 @@ class AudioDeviceManager {
 
   setDevice(kind, id) {
     this.selectedDevice[kind] = id;
-    const selectedDevice = this.devices.find((d) => d.deviceId === id);
-    if (selectedDevice) this.updateDeviceInfo(selectedDevice);
-  }
-
-  updateDeviceInfo(device) {
-    if (!device) return;
-
-    const label = device.label.toLowerCase();
-    const isVirtual =
-      label.includes("vb-cable") ||
-      label.includes("virtual") ||
-      label.includes("voicemeeter") ||
-      label.includes("cable output") ||
-      label.includes("cable input");
-
-    let deviceType = isVirtual ? "Virtual Audio Device" : "Physical Microphone";
-    let additionalInfo = "";
-
-    if (isVirtual) {
-      if (label.includes("vb-cable") || label.includes("vb cable")) {
-        additionalInfo =
-          " (Ideal for capturing audio from applications like Teams)";
-      } else if (label.includes("voicemeeter")) {
-        additionalInfo = " (Voicemeeter virtual device)";
-      }
-    }
-
-    if (device.label) {
-      this.deviceInfoElement.innerHTML = `
-                <strong>Selected Device:</strong> ${device.label} 
-                <span class="badge ${isVirtual ? "badge-virtual" : "badge-physical"}">${deviceType}</span>
-                ${additionalInfo}
-            `;
-    } else {
-      this.deviceInfoElement.textContent =
-        "Device details not available until recording starts";
-    }
-  }
-
-  getSelectedDeviceId() {
-    return this.selectedDeviceId;
   }
 }
-
