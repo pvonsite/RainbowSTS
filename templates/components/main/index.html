@@ -37,7 +37,13 @@
   <div class="flex flex-column w-full align-center">
     <h1 id="title" class="text-center">Let's start</h1>
 
-    <div id="main-btn-group" class="flex align-center w-full justify-center">
+    <div
+      id="main-btn-group"
+      class="flex align-center w-full justify-center"
+      style="gap: 1rem"
+    >
+      {% include 'components/main/mute-btn.html' %}
+      <!-- -->
       {% include 'components/main/play-btn.html' %}
       <!-- -->
       {% include 'components/main/stop-btn.html' %}

@@ -9,23 +9,8 @@
   #stop-btn:hover {
     box-shadow: rgba(222, 62, 68, 0.08) 0px 0px 2px 6px;
   }
-
-  #stop-btn-container {
-    width: 0;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    padding-right: 0.5rem;
-    padding-left: 1rem;
-    overflow: hidden;
-  }
-
-  #main-btn-group:has(#play-btn.paused) #stop-btn-container {
-    width: 6rem;
-  }
 </style>
 
-<div id="stop-btn-container">
-  <button id="stop-btn" class="glassy btn dense">
-    {% include 'icons/stop.svg' %}
-  </button>
-</div>
+<button id="stop-btn" class="glassy btn dense">
+  {% include 'icons/stop.svg' %}
+</button>

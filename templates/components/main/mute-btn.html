@@ -1,0 +1,59 @@
+<style>
+  #mute-btn {
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.16);
+    width: 4rem;
+    height: 4rem;
+    position: relative;
+  }
+
+  #mute-btn:hover {
+    box-shadow: rgba(255, 255, 255, 0.12) 0px 0px 2px 6px;
+  }
+
+  #mute-btn svg {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  #mute-btn[data-muted="true"] svg {
+    transform: translateX(-0.5rem);
+  }
+
+  #mute-btn:before,
+  #mute-btn:after {
+    content: "";
+    position: absolute;
+    height: 4px;
+    width: 0px;
+    right: 1rem;
+    top: 1.75rem;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: all 0.2s ease-in-out;
+  }
+
+  #mute-btn[data-muted="true"]:before {
+    width: 12px;
+    transform: rotate(45deg);
+  }
+
+  #mute-btn[data-muted="true"]:after {
+    width: 12px;
+    transform: rotate(-45deg);
+  }
+</style>
+
+<button id="mute-btn" class="glassy btn dense" data-muted="true">
+  {% include 'icons/volume.svg' %}
+</button>
+
+<script>
+  (() => {
+    const muteBtn = document.getElementById("mute-btn");
+
+    muteBtn.addEventListener("click", () => {
+      const isMuted = muteBtn.getAttribute("data-muted") === "true";
+      muteBtn.setAttribute("data-muted", !isMuted);
+    });
+  })();
+</script>
