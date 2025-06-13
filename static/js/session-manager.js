@@ -13,7 +13,23 @@ class SessionManager {
     try {
       const deviceId = state.selectedAudioCaptureDevice;
 
-      if (!deviceId) return;
+      if (!deviceId) {
+        notificator.error("Session", "No audio capture device selected.");
+        return false;
+      }
+
+      if (!state.srcLanguage || !state.dstLanguage) {
+        notificator.error(
+          "Session",
+          "Source and destination languages must be selected.",
+        );
+        return false;
+      }
+
+      if (!state.selectedS2tModel) {
+        notificator.error("Session", "No Speech-to-text model selected.");
+        return false;
+      }
 
       // Get configuration
       const config = {
