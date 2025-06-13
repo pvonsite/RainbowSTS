@@ -35,41 +35,38 @@ class SessionManager {
 
       const data = await response.json();
 
-      if (data.status === "success") {
-        this.sessionId = data.session_id;
-        this.websocketHandler.connect(data.websocket_url);
-        this.websocketHandler.addEventListener("connection", (data) => {
-          if (data && data.status === "connected") {
-            console.log("WebSocket connected:", data);
-            notificator.alert(
-              "WebSocket",
-              "WebSocket connection established successfully.",
-            );
-          } else {
-            console.error("WebSocket connection failed:", data);
-            notificator.alert(
-              "WebSocket",
-              "WebSocket connection failed.",
-              Notificator.ERROR,
-            );
-          }
-        });
-        this.websocketHandler.addEventListener("error", (error) => {
-          console.error("WebSocket error:", error);
-          this.statusElement.textContent = "Status: WebSocket error";
-        });
-
-        // Update UI
-        this.startBtn.disabled = true;
-        this.stopBtn.disabled = false;
-        this.refreshDevicesBtn.disabled = true;
-        this.statusElement.textContent = "Status: Session started";
-      } else {
-        this.statusElement.textContent = `Status: Error - ${data.message}`;
+      if (data.status !== "success") {
+        console.error("Error starting session:", data.message);
+        notificator.error("Session", `Error starting session: ${data.message}`);
+        return false;
       }
+
+      this.sessionId = data.session_id;
+      this.websocketHandler.connect(data.websocket_url);
+      this.websocketHandler.addEventListener("connection", (data) => {
+        if (data && data.status === "connected") {
+          console.log("WebSocket connected:", data);
+          notificator.success(
+            "WebSocket",
+            "WebSocket connection established successfully.",
+          );
+        } else {
+          console.error("WebSocket connection failed:", data);
+          notificator.error("WebSocket", "WebSocket connection failed.");
+        }
+      });
+
+      this.websocketHandler.addEventListener("error", (error) => {
+        console.error("WebSocket error:", error);
+        this.statusElement.textContent = "Status: WebSocket error";
+      });
+
+      notificator.success("Session", "Session started successfully.");
+      return true;
     } catch (error) {
       console.error("Error starting session:", error);
-      notificator.alert("Session", "Error starting session", Notificator.ERROR);
+      notificator.error("Session", "Error starting session");
+      return false;
     }
   }
 
@@ -123,4 +120,3 @@ class SessionManager {
     }
   }
 }
-
