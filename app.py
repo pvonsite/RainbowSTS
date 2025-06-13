@@ -5,6 +5,7 @@ import uuid
 
 from flask import Flask, render_template, request, jsonify
 
+import utils
 from ws_session import WebsocketSession
 
 #logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -12,25 +13,6 @@ from ws_session import WebsocketSession
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-MODELS = [
-    'tiny',
-    'tiny.en',
-    'base',
-    'base.en',
-    'small',
-    'small.en',
-    'medium',
-    'medium.en',
-    'large-v1',
-    'large-v2',
-    'large-v3',
-    'large',
-    'distil-large-v2',
-    'distil-medium',
-    'larget-v3-turbo',
-    'turbo',
-]
 
 logger = logging.getLogger(__name__)
 app = Flask(__name__, static_folder='static')
@@ -45,13 +27,46 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/models')
+@app.route('/models/stt')
 def get_models():
     """Return available STT models"""
     try:
-        return jsonify({'status': 'success', 'models': MODELS})
+        return jsonify({'status': 'success', 'models': utils.STT_MODELS})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/models/trans')
+def get_translation_models():
+    """Return available translation models"""
+    try:
+        return jsonify({'status': 'success', 'models': utils.TRANSLATE_MODELS})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/models/tts_engine')
+def get_tts_engines():
+    """Return available TTS engines"""
+    try:
+        return jsonify({'status': 'success', 'engines': utils.TTS_SUPPORTED_ENGINES})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/models/tts_engine/<engine_name>')
+def get_tts_engine_supported_voices(engine_name):
+    """Return supported voices for a specific TTS engine"""
+    language = None
+    if request.args.get('lang'):
+        language = request.args.get('lang')
+    try:
+        voices = utils.get_supported_voices(engine_name, language)
+        voices = [voice.name for voice in voices if hasattr(voice, 'name')]   # Convert to dict if needed
+        return jsonify({'status': 'success', 'voices': voices })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 @app.route('/start_session', methods=['POST'])
 def start_session():
