@@ -77,6 +77,15 @@ class SessionManager {
         this.statusElement.textContent = "Status: WebSocket error";
       });
 
+      this.websocketHandler.addEventListener(
+        "translation",
+        ({ original, translated, isFinal }) => {
+          if (isFinal) return state.pause().then(() => state.stop());
+          state.pushOriginalToken(original);
+          state.pushTranslatedToken(translated);
+        },
+      );
+
       notificator.success("Session", "Session started successfully.");
       return true;
     } catch (error) {
@@ -112,14 +121,12 @@ class SessionManager {
   async startListening() {
     if (this.websocketHandler.isSocketReady()) {
       try {
-        const deviceId = this.audioDeviceManager.getSelectedDeviceId();
+        const deviceId = state.selectedAudioCaptureDevice;
         await this.audioRecorder.startRecording(deviceId);
         this.websocketHandler.sendCommand("start_listening");
-        this.startListeningBtn.disabled = true;
-        this.stopListeningBtn.disabled = false;
       } catch (error) {
         console.error("Error starting recording:", error);
-        this.statusElement.textContent = "Status: Error accessing microphone";
+        notificator.error("Session", "Error accessing microphone");
       }
     }
   }
@@ -128,8 +135,6 @@ class SessionManager {
     if (this.websocketHandler.isSocketReady()) {
       this.audioRecorder.stopRecording();
       this.websocketHandler.sendCommand("stop_listening");
-      this.startListeningBtn.disabled = false;
-      this.stopListeningBtn.disabled = true;
     }
   }
 }
