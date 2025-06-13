@@ -28,6 +28,9 @@ class State extends EventTarget {
   srcLanguage = "";
   dstLanguage = "";
 
+  translatedText = "";
+  originalText = "";
+
   session = null;
 
   constructor() {
@@ -43,8 +46,10 @@ class State extends EventTarget {
     if (![State.STATES.WAITING, State.STATES.PAUSED].includes(this.state))
       return;
 
-    if (this.session) {
-      this.session.play();
+    if (sessionManager.sessionId) {
+      sessionManager.startListening();
+      this.setState(State.STATES.PLAYING);
+      return;
     }
 
     this.setState(State.STATES.CONNECTING);
@@ -56,12 +61,14 @@ class State extends EventTarget {
       return;
     }
 
+    sessionManager.startListening();
     this.setState(State.STATES.PLAYING);
   }
 
   async pause() {
     if (this.state !== State.STATES.PLAYING) return;
 
+    sessionManager.stopListening();
     this.setState(State.STATES.PAUSED);
   }
 
@@ -120,6 +127,16 @@ class State extends EventTarget {
   setState(state) {
     this.state = state;
     this.dispatchEvent(new Event("stateChanged"));
+  }
+
+  pushOriginalToken(token) {
+    this.originalText += token;
+    this.dispatchEvent(new Event("originalTextChanged"));
+  }
+
+  pushTranslatedToken(token) {
+    this.translatedText += token;
+    this.dispatchEvent(new Event("translatedTextChanged"));
   }
 
   get isWaiting() {
