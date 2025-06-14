@@ -80,8 +80,6 @@ class SessionManager {
       this.websocketHandler.addEventListener(
         "translation",
         ({ original, translated, isFinal }) => {
-          if (isFinal) return state.pause().then(() => state.stop());
-          state.pushOriginalToken(original);
           state.pushTranslatedToken(translated);
         },
       );

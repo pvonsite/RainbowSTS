@@ -40,7 +40,8 @@ class TranscribeView {
   }
 
   render() {
-    this.fullSentences.concat(" ", this.buildingSentence).concat("...");
+    state.pushLiveToken(this.buildingSentence);
+    state.pushOriginalToken(this.fullSentences);
   }
 }
 

@@ -96,5 +96,17 @@
       "liveTextChanged",
       () => (liveText.textContent = state.liveText),
     );
+
+    state.addEventListener(
+        "originalTextChanged",
+        () => (originalConversation.textContent = state.originalText || ORIGINAL_PLACEHOLDER),
+    );
+
+    state.addEventListener(
+      "translatedTextChanged",
+      () =>
+        (translatedConversation.textContent =
+          state.translatedText || TRANSLATED_PLACEHOLDER),
+    );
   })();
 </script>

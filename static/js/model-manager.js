@@ -14,6 +14,12 @@ class ModelManager {
   async initialize() {
     if (!this.initialized) {
       this.models = await this.loadModels();
+      const stt_list = this.models.speechtotext;
+      state.setSpeechToTextModel(stt_list[0])
+      const trans_list = this.models.translation
+      state.setTranslationModel(trans_list[0])
+      const tts_list = this.models.texttospeech
+      state.setTextToSpeechModel(tts_list[0])
       return (this.initialized = true);
     }
     return true;

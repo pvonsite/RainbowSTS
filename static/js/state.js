@@ -92,7 +92,7 @@ class State extends EventTarget {
 
   setDestinationLanguage(language) {
     this.dstLanguage = language;
-    this.dispatchEvent(new Event("destinationLanguageChanged"));
+    this.dispatchEvent(new Event("destLanguageChanged"));
   }
 
   setModel(model) {
@@ -132,12 +132,11 @@ class State extends EventTarget {
 
   pushLiveToken(text) {
     this.liveText += text;
-    this.liveText = this.liveText.slice(-1000);
     this.dispatchEvent(new Event("liveTextChanged"));
   }
 
   pushOriginalToken(token) {
-    this.originalText += token;
+    this.originalText = token;
     this.dispatchEvent(new Event("originalTextChanged"));
   }
 

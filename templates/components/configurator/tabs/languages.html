@@ -20,16 +20,17 @@
   (() => {
     const supportedSrcLanguages = {
       en: "English",
-      fr: "French",
-      es: "Spanish",
-      de: "German",
-      zh: "Chinese",
-      ja: "Japanese",
+        ja: "Japanese",
+        ko: "Korean",
+        zh: "Chinese",
+        de: "German",
+        fr: "French",
+        es: "Spanish",
+        vi: "Vietnamese",
     };
 
     const supportedDstLanguages = {
       ...supportedSrcLanguages,
-      vi: "Vietnamese",
     };
 
     const sourceLanguageSelector = document.getElementById("source-language");
@@ -37,6 +38,7 @@
 
     const populateLanguageOptions = (target, langs) => {
       Object.keys(langs).forEach((lang) => {
+          console.log(lang)
         const option = document.createElement("option");
         option.value = lang;
         option.textContent = langs[lang];
@@ -61,5 +63,8 @@
     state.addEventListener("destLanguageChanged", () => {
       destLanguageSelector.value = state.dstLanguage;
     });
+
+    state.setSourceLanguage('en');
+    state.setDestinationLanguage('vi')
   })();
 </script>
