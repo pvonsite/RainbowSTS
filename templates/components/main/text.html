@@ -5,13 +5,21 @@
     overflow: hidden;
   }
 
-  #text .text {
+  #text .running-text-container {
+    width: 80%;
+    height: 3rem;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #text .running-text {
+    position: absolute;
+    top: 0;
+    right: 0;
     font-size: 2.5rem;
     font-weight: 600;
     color: transparent;
-    overflow: hidden;
     background: rgba(255, 255, 255, 1);
-    width: 80%;
     background: linear-gradient(
       90deg,
       rgba(255, 255, 255, 0) 0%,
@@ -39,6 +47,8 @@
     padding-bottom: 1rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    max-height: 30vh;
+    overflow-y: auto;
   }
 
   #text .convo span[role="placeholder"] {
@@ -51,8 +61,13 @@
 </style>
 
 <div id="text" class="flex flex-column align-center">
-  <div id="original-text" class="text" data-kind="original">
-    Original text will be lived here
+  <div class="running-text-container">
+    <div id="original-text" class="running-text" data-kind="original">
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+      tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+      veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+      commodo consequat.
+    </div>
   </div>
 
   <div class="fullsentence flex glassy">
@@ -98,8 +113,10 @@
     );
 
     state.addEventListener(
-        "originalTextChanged",
-        () => (originalConversation.textContent = state.originalText || ORIGINAL_PLACEHOLDER),
+      "originalTextChanged",
+      () =>
+        (originalConversation.textContent =
+          state.originalText || ORIGINAL_PLACEHOLDER),
     );
 
     state.addEventListener(
